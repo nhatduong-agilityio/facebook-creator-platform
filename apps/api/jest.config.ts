@@ -16,7 +16,7 @@ const config: Config = {
   coverageThreshold: {
     global: { lines: 70, functions: 70 }
   },
-  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts']
+  setupFiles: ['<rootDir>/src/__tests__/setup.ts']
 };
 
 export default config;
