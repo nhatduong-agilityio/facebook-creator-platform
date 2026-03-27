@@ -1,11 +1,14 @@
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import { clerkPlugin } from '@clerk/fastify';
 import fastify, {
-  type FastifyInstance,
-  type FastifyServerOptions
+  type FastifyServerOptions,
+  type FastifyInstance
 } from 'fastify';
+import type { DataSource } from 'typeorm';
 
 import { globalErrorHandler } from './shared/error-handler';
+import { createAuthModule } from './modules/auth/module';
 
 /**
  * Builds and configures the Fastify application.
@@ -16,14 +19,14 @@ import { globalErrorHandler } from './shared/error-handler';
  * @param opts - Fastify server options. Defaults to structured JSON logging.
  * @returns A fully configured Fastify instance (not yet listening).
  */
-export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
-  // Destructure logger so the spread below does not override it
+export function buildApp(
+  dataSource?: DataSource,
+  opts: FastifyServerOptions = {}
+): FastifyInstance {
   const { logger: loggerOpt, ...restOpts } = opts;
 
   const app = fastify({
-    logger: loggerOpt ?? {
-      level: process.env.LOG_LEVEL ?? 'info'
-    },
+    logger: loggerOpt ?? { level: process.env.LOG_LEVEL ?? 'info' },
     // Allows Fastify to use Error.cause for better error context
     routerOptions: {
       ignoreDuplicateSlashes: true
@@ -47,6 +50,11 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
   });
 
+  app.register(clerkPlugin, {
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    secretKey: process.env.CLERK_SECRET_KEY
+  });
+
   // Raw body parser
   // Stripe webhooks require the raw Buffer to verify the signature.
   // We parse JSON ourselves and attach the raw Buffer as req.rawBody.
@@ -56,7 +64,8 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     (req, body: Buffer, done) => {
       req.rawBody = body;
       try {
-        done(null, JSON.parse(body.toString()));
+        const parsed: unknown = JSON.parse(body.toString());
+        done(null, parsed);
       } catch {
         const error = new Error('Invalid JSON body');
         done(error, undefined);
@@ -76,12 +85,17 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   });
 
   // Route modules
-  // Uncomment each block as the module is implemented in later phases.
-  // app.register(authRoutes,      { prefix: '/auth' });
-  // app.register(facebookRoutes,  { prefix: '/facebook' });
-  // app.register(postRoutes,      { prefix: '/posts' });
-  // app.register(analyticsRoutes, { prefix: '/analytics' });
-  // app.register(billingRoutes,   { prefix: '/billing' });
+  if (dataSource) {
+    const authModule = createAuthModule(dataSource);
+
+    app.register(authModule.routes.bind(authModule), {
+      prefix: '/api/v1/auth'
+    });
+    // app.register(facebookRoutes,  { prefix: '/facebook' });
+    // app.register(postRoutes,      { prefix: '/posts' });
+    // app.register(analyticsRoutes, { prefix: '/analytics' });
+    // app.register(billingRoutes,   { prefix: '/billing' });
+  }
 
   return app;
 }

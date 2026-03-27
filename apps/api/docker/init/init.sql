@@ -1,0 +1,1 @@
+CREATE DATABASE fcp_test;

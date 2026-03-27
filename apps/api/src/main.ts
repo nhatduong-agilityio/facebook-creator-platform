@@ -24,7 +24,7 @@ async function bootstrap(): Promise<void> {
     process.exit(1);
   }
 
-  const app = buildApp();
+  const app = buildApp(dataSource);
 
   try {
     await app.listen({ port: PORT, host: HOST });
