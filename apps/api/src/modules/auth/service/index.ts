@@ -1,23 +1,31 @@
+// Shared
 import { BaseService } from '@/shared/service';
-import type { UserEntity } from '@/modules/users/entity';
-import type { UserRepository } from '@/modules/users/repository';
-import { clerkClient } from '@clerk/fastify';
 
-export class AuthService extends BaseService {
-  constructor(private readonly userRepo: UserRepository) {
+// Types
+import type { UserEntity } from '@/modules/users/entity';
+import type {
+  AuthServicePort,
+  ClerkIdentifyProviderPort,
+  ClerkWebhookEventPayload
+} from '../ports';
+import type { UserClerkSyncPort } from '@/modules/users/ports';
+
+export class AuthService extends BaseService implements AuthServicePort {
+  constructor(
+    private readonly userRepo: UserClerkSyncPort,
+    private readonly clerkProvider: ClerkIdentifyProviderPort
+  ) {
     super();
   }
 
   /**
-   * Retrieve a user by their Clerk ID, or create one if it doesn't exist.
+   * Find or create a user by their Clerk user ID.
    *
-   * If the user exists, return the existing user entity.
-   * If the user doesn't exist, create a new user entity with the following properties:
-   *   - clerkUserId: the Clerk user ID passed as an argument
-   *   - email: the email address associated with the Clerk user, or an empty string if none is found
-   *   - name: the full name of the Clerk user, or an empty string if none is found
+   * If a user with the given Clerk user ID already exists, that user is returned.
+   * If no matching user exists, a new user is created with a Clerk user ID,
+   * email address, and full name.
    *
-   * @param {string} clerkUserId - the Clerk user ID to retrieve or create a user for
+   * @param {string} clerkUserId - the Clerk user ID to find or create a user for
    * @returns {Promise<UserEntity>} - a promise that resolves to a user entity
    */
   async getOrCreateUser(clerkUserId: string): Promise<UserEntity> {
@@ -26,15 +34,84 @@ export class AuthService extends BaseService {
     if (existing) return existing;
 
     // Fetch authoritative profile from Clerk
-    const clerkUser = await clerkClient.users.getUser(clerkUserId);
+    const clerkUser = await this.clerkProvider.getUserProfile(clerkUserId);
 
-    const email = clerkUser.emailAddresses[0]?.emailAddress ?? '';
-    const name =
-      [clerkUser.firstName, clerkUser.lastName]
-        .filter(Boolean)
-        .join(' ')
-        .trim() || null;
+    return await this.syncClerkUser({
+      clerkUserId: clerkUser.id,
+      email: clerkUser.email,
+      name: this.buildName(clerkUser.firstName, clerkUser.lastName)
+    });
+  }
 
-    return this.userRepo.create({ clerkUserId, email, name });
+  /**
+   * Handles Clerk webhooks, which notify our server of changes to user records.
+   * Clerk provides user data via the webhook event payload.
+   *
+   * @param {ClerkWebhookEventPayload} event - the Clerk webhook event payload
+   * @returns {Promise<UserEntity | null>} - a promise that resolves to a user entity
+   *  if the event is 'user.created' or 'user.updated', otherwise null
+   */
+  async syncClerkWebhook(
+    event: ClerkWebhookEventPayload
+  ): Promise<UserEntity | null> {
+    switch (event.type) {
+      case 'user.created':
+      case 'user.updated':
+        return event.data.id
+          ? await this.syncClerkUser({
+              clerkUserId: event.data.id,
+              email: event.data.email ?? `${event.data.id}@clerk.local`,
+              name: this.buildName(event.data.firstName, event.data.lastName)
+            })
+          : null;
+      case 'user.deleted':
+        if (event.data.id) {
+          await this.userRepo.deleteByClerkId(event.data.id);
+        }
+        return null;
+
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Creates or updates a user record with the provided Clerk user ID and email.
+   * If a user record with the provided Clerk user ID already exists, it is updated with the provided email and name.
+   * If no user record with the provided Clerk user ID exists, a new user record is created with the provided Clerk user ID, email, and name.
+   *
+   * @param {Object} input - the input object with the Clerk user ID, email, and name
+   * @param {string} input.clerkUserId - the Clerk user ID
+   * @param {string} input.email - the email address
+   * @param {string | null | undefined} input.name - the name (optional)
+   *
+   * @returns {Promise<UserEntity>} - a promise that resolves to a user entity if the user record was created or updated successfully
+   */
+  private async syncClerkUser(input: {
+    clerkUserId: string;
+    email: string;
+    name: string | null;
+  }): Promise<UserEntity> {
+    return await this.userRepo.saveClerkUser(input);
+  }
+
+  /**
+   * Builds a full name from the provided first and last names.
+   * If either or both names are null or undefined, returns null.
+   * If either name is empty, it is filtered out and the remaining name is returned.
+   * If both names are provided, they are joined together with a space in between and the resulting string is trimmed.
+   *
+   * @param {string | null | undefined} firstName - the first name
+   * @param {string | null | undefined} lastName - the last name
+   * @returns {string | null} - the full name or null if either name is empty or null
+   */
+  private buildName(
+    firstName: string | null | undefined,
+    lastName: string | null | undefined
+  ): string | null {
+    const fullName =
+      [firstName, lastName].filter(Boolean).join(' ').trim() || null;
+
+    return fullName;
   }
 }

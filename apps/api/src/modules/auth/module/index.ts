@@ -1,12 +1,20 @@
-import type { DataSource } from 'typeorm';
+// Types
+import type { AuthServicePort, ClerkWebhookVerifierPort } from '../ports';
+
+// Controllers
 import { AuthController } from '../controller';
-import { AuthService } from '../service';
-import { UserRepository } from '@/modules/users/repository';
 
-export function createAuthModule(dataSource: DataSource): AuthController {
-  const userRepo = new UserRepository(dataSource);
-  const authService = new AuthService(userRepo);
-  const controller = new AuthController(authService);
-
-  return controller;
+/**
+ * Creates an instance of the AuthController, which handles
+ * authentication-related endpoints (/auth/*).
+ *
+ * @param {AuthServicePort} authService - the authentication service
+ * @param {ClerkWebhookVerifierPort} clerkWebhookVerifier - the Clerk webhook verifier
+ * @returns {AuthController} - an instance of the AuthController
+ */
+export function createAuthModule(
+  authService: AuthServicePort,
+  clerkWebhookVerifier: ClerkWebhookVerifierPort
+): AuthController {
+  return new AuthController(authService, clerkWebhookVerifier);
 }

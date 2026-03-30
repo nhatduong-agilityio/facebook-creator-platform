@@ -1,8 +1,12 @@
 import type { DataSource } from 'typeorm';
 import { BaseRepository } from '@/shared/repository';
 import { UserEntity } from '../entity';
+import type { SaveClerkUserInput, UserRepositoryPort } from '../ports';
 
-export class UserRepository extends BaseRepository<UserEntity> {
+export class UserRepository
+  extends BaseRepository<UserEntity>
+  implements UserRepositoryPort
+{
   constructor(dataSource: DataSource) {
     super(dataSource, UserEntity);
   }
@@ -14,7 +18,15 @@ export class UserRepository extends BaseRepository<UserEntity> {
   async findByClerkId(clerkUserId: string): Promise<UserEntity | null> {
     return await this.repo.findOne({
       where: { clerkUserId },
-      select: ['id', 'clerkUserId', 'email', 'name', 'createdAt', 'updatedAt']
+      select: [
+        'id',
+        'clerkUserId',
+        'email',
+        'name',
+        'stripeCustomerId',
+        'createdAt',
+        'updatedAt'
+      ]
     });
   }
 
@@ -29,5 +41,24 @@ export class UserRepository extends BaseRepository<UserEntity> {
   }): Promise<UserEntity> {
     const user = this.repo.create(data);
     return await this.repo.save(user);
+  }
+
+  async saveClerkUser(data: SaveClerkUserInput): Promise<UserEntity> {
+    const existing = await this.findByClerkId(data.clerkUserId);
+
+    if (!existing) {
+      return await this.create(data);
+    }
+
+    existing.email = data.email;
+    existing.name = data.name ?? null;
+
+    return await this.repo.save(existing);
+  }
+
+  async deleteByClerkId(clerkUserId: string): Promise<boolean> {
+    const result = await this.repo.delete({ clerkUserId });
+
+    return (result.affected ?? 0) > 0;
   }
 }

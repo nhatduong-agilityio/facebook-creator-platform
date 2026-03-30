@@ -6,6 +6,7 @@ declare module 'fastify' {
     user: {
       id: string; // Clerk userId — always set after clerkAuthMiddleware
     };
+    currentUser: UserEntity;
     plan: {
       isPro: boolean;
       postLimit: number; // -1 = unlimited

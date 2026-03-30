@@ -9,6 +9,9 @@ import type { DataSource } from 'typeorm';
 
 import { globalErrorHandler } from './shared/error-handler';
 import { createAuthModule } from './modules/auth/module';
+import { UserRepository } from './modules/users/repository';
+import { AuthService } from './modules/auth/service';
+import { ClerkProvider } from './modules/auth/providers/clerk-provider';
 
 /**
  * Builds and configures the Fastify application.
@@ -86,7 +89,11 @@ export function buildApp(
 
   // Route modules
   if (dataSource) {
-    const authModule = createAuthModule(dataSource);
+    const userRepo = new UserRepository(dataSource);
+    const clerkProvider = new ClerkProvider();
+
+    const authService = new AuthService(userRepo, clerkProvider);
+    const authModule = createAuthModule(authService, clerkProvider);
 
     app.register(authModule.routes.bind(authModule), {
       prefix: '/api/v1/auth'
