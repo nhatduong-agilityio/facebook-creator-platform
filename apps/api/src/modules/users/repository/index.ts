@@ -61,4 +61,6 @@ export class UserRepository
 
     return (result.affected ?? 0) > 0;
   }
+
+  // TODO: Add method for billing info updates, e.g. updateStripeCustomerId(userId: string, stripeCustomerId: string): Promise<void>
 }

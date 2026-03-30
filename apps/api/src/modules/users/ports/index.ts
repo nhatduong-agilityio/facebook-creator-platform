@@ -16,4 +16,6 @@ export interface UserClerkSyncPort extends UserLookupPort {
   deleteByClerkId(clerkUserId: string): Promise<boolean>;
 }
 
+// TODO: Add interface for billing info updates, e.g. updateStripeCustomerId(userId: string, stripeCustomerId: string): Promise<void>
+
 export type UserRepositoryPort = UserClerkSyncPort;

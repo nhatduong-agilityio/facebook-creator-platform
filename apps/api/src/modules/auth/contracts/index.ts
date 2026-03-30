@@ -17,6 +17,7 @@ export type AuthWebhookResultDto = {
 
 export function toAuthSessionDto(
   user: UserEntity,
+  // TODO: Update to actual role and plan types in billing module when implemented
   role?: string,
   plan?: string
 ): AuthSessionDto {

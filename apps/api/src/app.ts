@@ -12,6 +12,10 @@ import { createAuthModule } from './modules/auth/module';
 import { UserRepository } from './modules/users/repository';
 import { AuthService } from './modules/auth/service';
 import { ClerkProvider } from './modules/auth/providers/clerk-provider';
+import { FacebookAccountRepository } from './modules/facebook/repository';
+import { FacebookGraphProvider } from './modules/facebook/providers/facebook-graph-provider';
+import { FacebookService } from './modules/facebook/service';
+import { createFacebookModule } from './modules/facebook/module';
 
 /**
  * Builds and configures the Fastify application.
@@ -89,19 +93,32 @@ export function buildApp(
 
   // Route modules
   if (dataSource) {
+    // Repositories
     const userRepo = new UserRepository(dataSource);
-    const clerkProvider = new ClerkProvider();
+    const facebookAccountRepo = new FacebookAccountRepository(dataSource);
 
+    // Providers
+    const clerkProvider = new ClerkProvider();
+    const facebookProvider = new FacebookGraphProvider();
+
+    // Services
     const authService = new AuthService(userRepo, clerkProvider);
+    const facebookService = new FacebookService(
+      userRepo,
+      facebookAccountRepo,
+      facebookProvider
+    );
+
+    // Modules
     const authModule = createAuthModule(authService, clerkProvider);
+    const facebookModule = createFacebookModule(facebookService, authService);
 
     app.register(authModule.routes.bind(authModule), {
       prefix: '/api/v1/auth'
     });
-    // app.register(facebookRoutes,  { prefix: '/facebook' });
-    // app.register(postRoutes,      { prefix: '/posts' });
-    // app.register(analyticsRoutes, { prefix: '/analytics' });
-    // app.register(billingRoutes,   { prefix: '/billing' });
+    app.register(facebookModule.routes.bind(facebookModule), {
+      prefix: '/api/v1/facebook'
+    });
   }
 
   return app;

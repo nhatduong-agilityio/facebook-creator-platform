@@ -14,6 +14,7 @@ import { AuthController } from '../controller';
  */
 export function createAuthModule(
   authService: AuthServicePort,
+  // TODO: ADding billing service as a dependency here in the future when implementing plan guards for auth-protected endpoints
   clerkWebhookVerifier: ClerkWebhookVerifierPort
 ): AuthController {
   return new AuthController(authService, clerkWebhookVerifier);

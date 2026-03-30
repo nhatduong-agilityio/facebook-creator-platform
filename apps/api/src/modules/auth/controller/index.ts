@@ -23,6 +23,8 @@ export class AuthController extends BaseController {
     typeof createAuthContextMiddleware
   >;
 
+  // TODO: Implement plan guard when billing module is implemented and inject a plan guard service here in the future
+
   constructor(
     private readonly authService: AuthServicePort,
     private readonly clerkWebhookVerifier: ClerkWebhookVerifierPort
