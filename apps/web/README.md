@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Web App
 
-## Getting Started
+Frontend client for the Facebook Creator Platform API in `apps/api`.
 
-First, run the development server:
+## Responsibilities
+
+- Sign users in with Clerk
+- Call protected backend routes with the Clerk session token
+- Connect Facebook pages through the web callback route
+- Create, edit, schedule, publish, and delete posts
+- Show analytics overview and post-level metrics
+- Start Stripe Checkout for Pro plan upgrades
+
+## Environment
+
+Create `apps/web/.env.local`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp apps/web/.env.example apps/web/.env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Required values:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
+NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development
 
-## Learn More
+```bash
+pnpm --filter web dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+The web app runs on [http://localhost:3001](http://localhost:3001).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Facebook OAuth
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Set the API environment variable below so Facebook redirects back to the web
+app instead of directly to the API:
 
-## Deploy on Vercel
+```bash
+FACEBOOK_REDIRECT_URI=http://localhost:3001/facebook/connect
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The callback page then calls `POST /facebook/callback` with the authenticated
+session token.
