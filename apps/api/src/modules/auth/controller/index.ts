@@ -12,7 +12,7 @@ import { clerkAuthMiddleware } from '@/middlewares/clerk-auth';
 import { createAuthContextMiddleware } from '@/middlewares/auth-context';
 
 // Shared
-import { ValidationError } from '@/shared/errors';
+import { ValidationError } from '@/shared/errors/errors';
 import { BaseController } from '@/shared/controller';
 
 // Contracts

@@ -71,4 +71,15 @@ export interface FacebookServicePort {
     userId: string,
     facebookAccountId?: string | null
   ): Promise<FacebookAccountEntity>;
+  publishPost(
+    account: FacebookAccountEntity,
+    post: {
+      content: string;
+      mediaUrl?: string | null;
+    }
+  ): Promise<{ facebookPostId: string }>;
+  fetchPostMetrics(
+    account: FacebookAccountEntity,
+    facebookPostId: string
+  ): Promise<FacebookPostMetricsDto>;
 }

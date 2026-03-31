@@ -1,6 +1,6 @@
 // Shared
 import { BaseService } from '@/shared/service';
-import { ValidationError } from '@/shared/errors';
+import { ValidationError } from '@/shared/errors/errors';
 
 // Types
 import type {

@@ -7,7 +7,7 @@ import fastify, {
 } from 'fastify';
 import type { DataSource } from 'typeorm';
 
-import { globalErrorHandler } from './shared/error-handler';
+import { globalErrorHandler } from './shared/errors/error-handler';
 import { createAuthModule } from './modules/auth/module';
 import { UserRepository } from './modules/users/repository';
 import { AuthService } from './modules/auth/service';
@@ -16,6 +16,10 @@ import { FacebookAccountRepository } from './modules/facebook/repository';
 import { FacebookGraphProvider } from './modules/facebook/providers/facebook-graph-provider';
 import { FacebookService } from './modules/facebook/service';
 import { createFacebookModule } from './modules/facebook/module';
+import { PostRepository } from './modules/posts/repository';
+import { PostSchedulerProvider } from './modules/posts/providers/post-scheduler-provider';
+import { PostService } from './modules/posts/service';
+import { createPostModule } from './modules/posts/module';
 
 /**
  * Builds and configures the Fastify application.
@@ -96,10 +100,12 @@ export function buildApp(
     // Repositories
     const userRepo = new UserRepository(dataSource);
     const facebookAccountRepo = new FacebookAccountRepository(dataSource);
+    const postRepo = new PostRepository(dataSource);
 
     // Providers
     const clerkProvider = new ClerkProvider();
     const facebookProvider = new FacebookGraphProvider();
+    const postScheduler = new PostSchedulerProvider();
 
     // Services
     const authService = new AuthService(userRepo, clerkProvider);
@@ -108,16 +114,26 @@ export function buildApp(
       facebookAccountRepo,
       facebookProvider
     );
+    const postService = new PostService(
+      userRepo,
+      postRepo,
+      facebookService,
+      postScheduler
+    );
 
     // Modules
     const authModule = createAuthModule(authService, clerkProvider);
     const facebookModule = createFacebookModule(facebookService, authService);
+    const postModule = createPostModule(postService, authService);
 
     app.register(authModule.routes.bind(authModule), {
       prefix: '/api/v1/auth'
     });
     app.register(facebookModule.routes.bind(facebookModule), {
       prefix: '/api/v1/facebook'
+    });
+    app.register(postModule.routes.bind(postModule), {
+      prefix: '/api/v1/posts'
     });
   }
 
