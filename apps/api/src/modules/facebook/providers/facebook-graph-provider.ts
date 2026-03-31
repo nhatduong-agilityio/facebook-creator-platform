@@ -1,5 +1,5 @@
 // Shared
-import { ExternalServiceError, ValidationError } from '@/shared/errors';
+import { ExternalServiceError, ValidationError } from '@/shared/errors/errors';
 import { FACEBOOK_PERMISSIONS } from '@/shared/constants/facebook';
 
 // Types

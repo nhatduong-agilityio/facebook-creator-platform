@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import path from 'path';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@/modules/users/entity';
+import { FacebookAccountEntity } from '@/modules/facebook/entity';
+import { PostEntity } from '@/modules/posts/entity';
 
 // Add new entities here as modules are built.
 // Explicit imports are preferred over glob patterns —
@@ -50,9 +52,9 @@ export function createDataSource(): DataSource {
     // Entities: explicit array — traceable imports, no glob surprises.
     // Uncomment each entity as you build its module.
     entities: [
-      UserEntity
-      // FacebookAccountEntity,
-      // PostEntity,
+      UserEntity,
+      FacebookAccountEntity,
+      PostEntity
       // PostMetricEntity,
       // PlanEntity,
       // SubscriptionEntity,

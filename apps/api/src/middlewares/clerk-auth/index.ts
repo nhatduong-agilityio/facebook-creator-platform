@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { getAuth } from '@clerk/fastify';
 
-import { UnauthorizedError } from '@/shared/errors';
+import { UnauthorizedError } from '@/shared/errors/errors';
 
 /**
  * Fastify preHandler hook that verifies a Clerk JWT via clerkPlugin.

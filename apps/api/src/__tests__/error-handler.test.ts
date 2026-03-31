@@ -1,6 +1,6 @@
 import { type ZodError, z } from 'zod';
 
-import { globalErrorHandler } from '@/shared/error-handler';
+import { globalErrorHandler } from '@/shared/errors/error-handler';
 import {
   AppError,
   NotFoundError,
@@ -9,7 +9,7 @@ import {
   ConflictError,
   ValidationError,
   ExternalServiceError
-} from '@/shared/errors';
+} from '@/shared/errors/errors';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 const makeReply = () => {
