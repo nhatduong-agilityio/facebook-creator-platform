@@ -1,5 +1,9 @@
 import 'fastify';
 
+// Types
+import type { UserEntity } from '@/modules/users/entity';
+import type { BillingPlanContext } from '@/modules/billing/contracts';
+
 declare module 'fastify' {
   interface FastifyRequest {
     rawBody: string | Buffer<ArrayBufferLike>;
@@ -7,10 +11,6 @@ declare module 'fastify' {
       id: string; // Clerk userId — always set after clerkAuthMiddleware
     };
     currentUser: UserEntity;
-    plan: {
-      isPro: boolean;
-      postLimit: number; // -1 = unlimited
-      scheduledLimit: number; // -1 = unlimited
-    };
+    plan: BillingPlanContext;
   }
 }

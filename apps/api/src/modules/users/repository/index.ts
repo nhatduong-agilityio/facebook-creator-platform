@@ -30,6 +30,14 @@ export class UserRepository
     });
   }
 
+  async findByStripeCustomerId(
+    stripeCustomerId: string
+  ): Promise<UserEntity | null> {
+    return await this.repo.findOne({
+      where: { stripeCustomerId }
+    });
+  }
+
   /**
    * Create and persist a new user record.
    * Called on first login when no matching clerkUserId exists.
@@ -62,5 +70,10 @@ export class UserRepository
     return (result.affected ?? 0) > 0;
   }
 
-  // TODO: Add method for billing info updates, e.g. updateStripeCustomerId(userId: string, stripeCustomerId: string): Promise<void>
+  async updateStripeCustomerId(
+    id: string,
+    stripeCustomerId: string
+  ): Promise<void> {
+    await this.repo.update(id, { stripeCustomerId });
+  }
 }

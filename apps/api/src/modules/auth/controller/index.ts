@@ -5,11 +5,12 @@ import type {
   ClerkWebhookEventPayload,
   ClerkWebhookVerifierPort
 } from '@/modules/auth/ports';
-import type { UserEntity } from '@/modules/users/entity';
+import type { BillingServicePort } from '@/modules/billing/ports';
 
 // Middlewares
 import { clerkAuthMiddleware } from '@/middlewares/clerk-auth';
 import { createAuthContextMiddleware } from '@/middlewares/auth-context';
+import { createPlanGuardMiddleware } from '@/middlewares/plan-guard';
 
 // Shared
 import { ValidationError } from '@/shared/errors/errors';
@@ -22,15 +23,16 @@ export class AuthController extends BaseController {
   private readonly authContextMiddleware: ReturnType<
     typeof createAuthContextMiddleware
   >;
-
-  // TODO: Implement plan guard when billing module is implemented and inject a plan guard service here in the future
+  private readonly planGuard: ReturnType<typeof createPlanGuardMiddleware>;
 
   constructor(
     private readonly authService: AuthServicePort,
+    billingService: BillingServicePort,
     private readonly clerkWebhookVerifier: ClerkWebhookVerifierPort
   ) {
     super();
     this.authContextMiddleware = createAuthContextMiddleware(authService);
+    this.planGuard = createPlanGuardMiddleware(billingService);
   }
 
   /**
@@ -52,7 +54,11 @@ export class AuthController extends BaseController {
      * If claims are absent we fall back to empty strings — the user
      * can update their profile later via a separate endpoint.
      */
-    const protectedHandlers = [clerkAuthMiddleware, this.authContextMiddleware];
+    const protectedHandlers = [
+      clerkAuthMiddleware,
+      this.authContextMiddleware,
+      this.planGuard
+    ];
 
     fastify.get('/me', { preHandler: protectedHandlers }, this.me.bind(this));
     fastify.get(
@@ -76,7 +82,7 @@ export class AuthController extends BaseController {
   private async me(req: FastifyRequest, reply: FastifyReply): Promise<void> {
     return reply.send({
       success: true,
-      data: toAuthSessionDto(req.currentUser as UserEntity)
+      data: toAuthSessionDto(req.currentUser, req.plan)
     });
   }
 
