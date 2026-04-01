@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { UserEntity } from '@/modules/users/entity';
 import { FacebookAccountEntity } from '@/modules/facebook/entity';
 import { PostEntity } from '@/modules/posts/entity';
+import { AuditLogEntity } from '@/modules/audit-logs/entity';
 
 // Add new entities here as modules are built.
 // Explicit imports are preferred over glob patterns —
@@ -54,11 +55,11 @@ export function createDataSource(): DataSource {
     entities: [
       UserEntity,
       FacebookAccountEntity,
-      PostEntity
+      PostEntity,
       // PostMetricEntity,
       // PlanEntity,
       // SubscriptionEntity,
-      // AuditLogEntity,
+      AuditLogEntity
     ],
 
     // synchronize: auto-creates/alters tables to match entities.

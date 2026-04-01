@@ -20,6 +20,7 @@ import { PostRepository } from './modules/posts/repository';
 import { PostSchedulerProvider } from './modules/posts/providers/post-scheduler-provider';
 import { PostService } from './modules/posts/service';
 import { createPostModule } from './modules/posts/module';
+import { AuditLogRepository } from './modules/audit-logs/repository';
 
 /**
  * Builds and configures the Fastify application.
@@ -101,6 +102,7 @@ export function buildApp(
     const userRepo = new UserRepository(dataSource);
     const facebookAccountRepo = new FacebookAccountRepository(dataSource);
     const postRepo = new PostRepository(dataSource);
+    const auditLogRepo = new AuditLogRepository(dataSource);
 
     // Providers
     const clerkProvider = new ClerkProvider();
@@ -112,12 +114,14 @@ export function buildApp(
     const facebookService = new FacebookService(
       userRepo,
       facebookAccountRepo,
+      auditLogRepo,
       facebookProvider
     );
     const postService = new PostService(
       userRepo,
       postRepo,
       facebookService,
+      auditLogRepo,
       postScheduler
     );
 
