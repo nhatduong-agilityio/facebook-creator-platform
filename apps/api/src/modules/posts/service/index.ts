@@ -24,14 +24,15 @@ import type {
   SchedulePostBodyDto,
   UpdatePostBodyDto
 } from '../contracts';
+import type { AuditLogWritePort } from '@/modules/audit-logs/ports';
 
 export class PostService extends BaseService implements PostServicePort {
   constructor(
     private readonly userRepo: UserLookupPort,
     private readonly postRepo: PostRepositoryPort,
     private readonly facebookService: FacebookServicePort,
+    private readonly auditLogRepo: AuditLogWritePort,
     private readonly postScheduler: PostSchedulerPort
-    // TODO: Adding audit logging feature later
   ) {
     super();
   }
@@ -78,7 +79,13 @@ export class PostService extends BaseService implements PostServicePort {
       lastError: null
     });
 
-    // TODO: Adding audit logging feature later
+    // Create audit log entry for the post
+    await this.auditLogRepo.createEntry({
+      userId: user.id,
+      action: 'post.created',
+      entityType: 'post',
+      entityId: post.id
+    });
 
     return post;
   }
@@ -120,7 +127,13 @@ export class PostService extends BaseService implements PostServicePort {
           : input.mediaUrl?.trim() || null
     });
 
-    // TODO: Adding audit logging feature later
+    // Create audit log entry for the post
+    await this.auditLogRepo.createEntry({
+      userId: user.id,
+      action: 'post.updated',
+      entityType: 'post',
+      entityId: updatePost.id
+    });
 
     return updatePost;
   }
@@ -135,7 +148,13 @@ export class PostService extends BaseService implements PostServicePort {
 
     await this.postRepo.delete(post.id);
 
-    // TODO: Adding audit logging feature later
+    // Create audit log entry for the post
+    await this.auditLogRepo.createEntry({
+      userId: user.id,
+      action: 'post.deleted',
+      entityType: 'post',
+      entityId: post.id
+    });
   }
 
   async publishPostNow(userId: string, postId: string): Promise<PostEntity> {
@@ -143,7 +162,16 @@ export class PostService extends BaseService implements PostServicePort {
     const post = await this.requireOwnedPost(user.id, postId);
     const publishedPost = await this.publishStoredPost(post);
 
-    // TODO: Adding audit logging feature later
+    // Create audit log entry for the post
+    await this.auditLogRepo.createEntry({
+      userId: user.id,
+      action: 'post.published',
+      entityType: 'post',
+      entityId: publishedPost.id,
+      metadata: {
+        facebookPostId: publishedPost.facebookPostId
+      }
+    });
 
     return publishedPost;
   }
@@ -195,7 +223,16 @@ export class PostService extends BaseService implements PostServicePort {
 
     await this.postScheduler.schedulePublish(scheduledPost.id, scheduledAt);
 
-    // TODO: Adding audit logging feature later
+    // Create audit log entry for the post
+    await this.auditLogRepo.createEntry({
+      userId: user.id,
+      action: 'post.scheduled',
+      entityType: 'post',
+      entityId: scheduledPost.id,
+      metadata: {
+        scheduledAt: scheduledAt.toISOString()
+      }
+    });
 
     return scheduledPost;
   }
@@ -213,7 +250,16 @@ export class PostService extends BaseService implements PostServicePort {
 
     const publishedPost = await this.publishStoredPost(post);
 
-    // TODO: Adding audit logging feature later
+    // Create audit log entry for the post
+    await this.auditLogRepo.createEntry({
+      userId: publishedPost.userId,
+      action: 'post.published',
+      entityType: 'post',
+      entityId: publishedPost.id,
+      metadata: {
+        facebookPostId: publishedPost.facebookPostId
+      }
+    });
 
     return publishedPost;
   }

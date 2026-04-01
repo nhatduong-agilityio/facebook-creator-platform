@@ -12,6 +12,7 @@ import type { UserLookupPort } from '@/modules/users/ports';
 import type { FacebookAccountEntity } from '../entity';
 import type { UserEntity } from '@/modules/users/entity';
 import type { FacebookPostMetricsDto } from '../contracts';
+import type { AuditLogWritePort } from '@/modules/audit-logs/ports';
 
 export class FacebookService
   extends BaseService
@@ -20,8 +21,8 @@ export class FacebookService
   constructor(
     private readonly userRepo: UserLookupPort,
     private readonly accountRepo: FacebookAccountRepositoryPort,
+    private readonly auditLogRepo: AuditLogWritePort,
     private readonly facebookProvider: FacebookProviderPort
-    // TODO: Implement audit logging and inject an audit log repository here in the future
   ) {
     super();
   }
@@ -62,7 +63,17 @@ export class FacebookService
       tokenExpiresAt: connection.tokenExpiresAt
     });
 
-    // TODO: Implement audit logging for Facebook account connections here in the future
+    // Create an audit log entry
+    await this.auditLogRepo.createEntry({
+      userId: user.id,
+      action: 'facebook.account.connected',
+      entityType: 'facebook_account',
+      entityId: account.id,
+      metadata: {
+        pageId: account.pageId,
+        pageName: account.pageName
+      }
+    });
 
     return account;
   }
