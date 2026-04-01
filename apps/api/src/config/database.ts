@@ -7,21 +7,7 @@ import { PostEntity } from '@/modules/posts/entity';
 import { AuditLogEntity } from '@/modules/audit-logs/entity';
 import { PostMetricEntity } from '@/modules/analytics/entity';
 import { PlanEntity } from '@/modules/plans/entity';
-
-// Add new entities here as modules are built.
-// Explicit imports are preferred over glob patterns —
-// glob strings break when compiled to dist/ with different paths.
-//
-// import { UserEntity }            from '../modules/users/entities/user.entity';
-// import { FacebookAccountEntity } from '../modules/facebook/entities/facebook-account.entity';
-// import { PostEntity }            from '../modules/posts/entities/post.entity';
-// import { PostMetricEntity }      from '../modules/analytics/entities/post-metric.entity';
-// import { PlanEntity }            from '../modules/billing/entities/plan.entity';
-// import { SubscriptionEntity }    from '../modules/billing/entities/subscription.entity';
-// import { AuditLogEntity }        from '../modules/audit/entities/audit-log.entity';
-
-// Single source of truth for the DB connection.
-// Passed into repositories via constructor (DI — no global access).
+import { SubscriptionEntity } from '@/modules/subscriptions/entity';
 
 /**
  * Creates a new DataSource instance configured for PostgreSQL.
@@ -60,7 +46,7 @@ export function createDataSource(): DataSource {
       PostEntity,
       PostMetricEntity,
       PlanEntity,
-      // SubscriptionEntity,
+      SubscriptionEntity,
       AuditLogEntity
     ],
 
