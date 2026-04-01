@@ -5,6 +5,7 @@ import { BaseController } from '@/shared/controller';
 import type { PostServicePort } from '../ports';
 import type { AuthServicePort } from '@/modules/auth/ports';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { BillingServicePort } from '@/modules/billing/ports';
 
 // Middlewares
 import { createAuthContextMiddleware } from '@/middlewares/auth-context';
@@ -29,12 +30,12 @@ export class PostController extends BaseController {
 
   constructor(
     private readonly postService: PostServicePort,
-    // TODO: Add billing service when implemented,
+    billingService: BillingServicePort,
     authService: AuthServicePort
   ) {
     super();
     this.authContextMiddleware = createAuthContextMiddleware(authService);
-    this.planGuard = createPlanGuardMiddleware();
+    this.planGuard = createPlanGuardMiddleware(billingService);
   }
 
   override routes(fastify: FastifyInstance): void {

@@ -10,6 +10,7 @@ import { clerkAuthMiddleware } from '@/middlewares/clerk-auth';
 import type { AnalyticsServicePort } from '../ports';
 import type { AuthServicePort } from '@/modules/auth/ports';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { BillingServicePort } from '@/modules/billing/ports';
 
 export class AnalyticsController extends BaseController {
   private readonly authContextMiddleware: ReturnType<
@@ -19,12 +20,12 @@ export class AnalyticsController extends BaseController {
 
   constructor(
     private readonly analyticsService: AnalyticsServicePort,
+    billingService: BillingServicePort,
     authService: AuthServicePort
-    // TODO: Adding the billing service when implement billing module
   ) {
     super();
     this.authContextMiddleware = createAuthContextMiddleware(authService);
-    this.planGuard = createPlanGuardMiddleware();
+    this.planGuard = createPlanGuardMiddleware(billingService);
   }
 
   override routes(fastify: FastifyInstance): void {

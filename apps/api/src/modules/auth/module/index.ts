@@ -1,5 +1,6 @@
 // Types
 import type { AuthServicePort, ClerkWebhookVerifierPort } from '../ports';
+import type { BillingServicePort } from '@/modules/billing/ports';
 
 // Controllers
 import { AuthController } from '../controller';
@@ -14,8 +15,8 @@ import { AuthController } from '../controller';
  */
 export function createAuthModule(
   authService: AuthServicePort,
-  // TODO: ADding billing service as a dependency here in the future when implementing plan guards for auth-protected endpoints
+  billingService: BillingServicePort,
   clerkWebhookVerifier: ClerkWebhookVerifierPort
 ): AuthController {
-  return new AuthController(authService, clerkWebhookVerifier);
+  return new AuthController(authService, billingService, clerkWebhookVerifier);
 }

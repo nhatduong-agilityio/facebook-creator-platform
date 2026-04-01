@@ -1,3 +1,4 @@
+import type { BillingServicePort } from '@/modules/billing/ports';
 import { ForbiddenError } from '@/shared/errors/errors';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -9,12 +10,14 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
  *
  * @returns {function} - a middleware function that checks for a valid plan.
  */
-export function createPlanGuardMiddleware() {
+export function createPlanGuardMiddleware(billingService: BillingServicePort) {
   return async function planGuardMiddleware(
-    _req: FastifyRequest,
+    req: FastifyRequest,
     _reply: FastifyReply
   ): Promise<void> {
-    // TODO: Add plan guard
+    req.plan = req.currentUser
+      ? await billingService.getUserPlanContextForUser(req.currentUser)
+      : await billingService.getUserPlanContext(req.user.id);
   };
 }
 

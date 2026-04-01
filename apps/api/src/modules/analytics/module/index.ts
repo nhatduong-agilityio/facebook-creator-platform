@@ -1,14 +1,15 @@
 // Types
 import type { AuthServicePort } from '@/modules/auth/ports';
 import type { AnalyticsServicePort } from '../ports';
+import type { BillingServicePort } from '@/modules/billing/ports';
 
 // Controllers
 import { AnalyticsController } from '../controller';
 
 export function createAnalyticsModule(
   analyticsService: AnalyticsServicePort,
+  billingService: BillingServicePort,
   authService: AuthServicePort
-  // TODO: Adding the billing service when implement billing module
 ): AnalyticsController {
-  return new AnalyticsController(analyticsService, authService);
+  return new AnalyticsController(analyticsService, billingService, authService);
 }

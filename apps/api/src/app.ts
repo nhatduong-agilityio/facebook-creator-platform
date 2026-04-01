@@ -24,6 +24,11 @@ import { AuditLogRepository } from './modules/audit-logs/repository';
 import { PostMetricRepository } from './modules/analytics/repository';
 import { AnalyticsService } from './modules/analytics/service';
 import { createAnalyticsModule } from './modules/analytics/module';
+import { SubscriptionRepository } from './modules/subscriptions/repository';
+import { StripeProvider } from './modules/billing/providers/stripe-provider';
+import { BillingService } from './modules/billing/service';
+import { PlanRepository } from './modules/plans/repository';
+import { createBillingModule } from './modules/billing/module';
 
 /**
  * Builds and configures the Fastify application.
@@ -107,11 +112,14 @@ export function buildApp(
     const postRepo = new PostRepository(dataSource);
     const auditLogRepo = new AuditLogRepository(dataSource);
     const postMetricRepo = new PostMetricRepository(dataSource);
+    const subscriptionRepo = new SubscriptionRepository(dataSource);
+    const planRepo = new PlanRepository(dataSource);
 
     // Providers
     const clerkProvider = new ClerkProvider();
     const facebookProvider = new FacebookGraphProvider();
     const postScheduler = new PostSchedulerProvider();
+    const stripeProvider = new StripeProvider();
 
     // Services
     const authService = new AuthService(userRepo, clerkProvider);
@@ -136,15 +144,32 @@ export function buildApp(
       facebookService,
       auditLogRepo
     );
+    const billingService = new BillingService(
+      userRepo,
+      planRepo,
+      subscriptionRepo,
+      auditLogRepo,
+      stripeProvider
+    );
 
     // Modules
-    const authModule = createAuthModule(authService, clerkProvider);
+    const authModule = createAuthModule(
+      authService,
+      billingService,
+      clerkProvider
+    );
     const facebookModule = createFacebookModule(facebookService, authService);
-    const postModule = createPostModule(postService, authService);
-    const analyticsModule = createAnalyticsModule(
-      analyticsService,
+    const postModule = createPostModule(
+      postService,
+      billingService,
       authService
     );
+    const analyticsModule = createAnalyticsModule(
+      analyticsService,
+      billingService,
+      authService
+    );
+    const billingModule = createBillingModule(billingService, authService);
 
     app.register(authModule.routes.bind(authModule), {
       prefix: '/api/v1/auth'
@@ -157,6 +182,9 @@ export function buildApp(
     });
     app.register(analyticsModule.routes.bind(analyticsModule), {
       prefix: '/api/v1/analytics'
+    });
+    app.register(billingModule.routes.bind(billingModule), {
+      prefix: '/api/v1/billing'
     });
   }
 
