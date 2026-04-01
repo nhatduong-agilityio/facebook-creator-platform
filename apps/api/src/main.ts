@@ -3,6 +3,7 @@ import * as dotenv from 'dotenv';
 import { buildApp } from './app';
 import { closeDb, initializeDb } from './config/database';
 import type { DataSource } from 'typeorm';
+import { PlanRepository } from './modules/plans/repository';
 
 dotenv.config();
 
@@ -19,6 +20,8 @@ async function bootstrap(): Promise<void> {
 
   try {
     dataSource = await initializeDb();
+    const planRepo = new PlanRepository(dataSource);
+    await planRepo.ensureDefaults();
   } catch (err) {
     console.error('[DB] Failed to connect. Exiting.', err);
     process.exit(1);

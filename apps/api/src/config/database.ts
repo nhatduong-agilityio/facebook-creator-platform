@@ -6,6 +6,7 @@ import { FacebookAccountEntity } from '@/modules/facebook/entity';
 import { PostEntity } from '@/modules/posts/entity';
 import { AuditLogEntity } from '@/modules/audit-logs/entity';
 import { PostMetricEntity } from '@/modules/analytics/entity';
+import { PlanEntity } from '@/modules/plans/entity';
 
 // Add new entities here as modules are built.
 // Explicit imports are preferred over glob patterns —
@@ -58,7 +59,7 @@ export function createDataSource(): DataSource {
       FacebookAccountEntity,
       PostEntity,
       PostMetricEntity,
-      // PlanEntity,
+      PlanEntity,
       // SubscriptionEntity,
       AuditLogEntity
     ],
