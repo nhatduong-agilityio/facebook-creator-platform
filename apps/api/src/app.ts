@@ -21,6 +21,9 @@ import { PostSchedulerProvider } from './modules/posts/providers/post-scheduler-
 import { PostService } from './modules/posts/service';
 import { createPostModule } from './modules/posts/module';
 import { AuditLogRepository } from './modules/audit-logs/repository';
+import { PostMetricRepository } from './modules/analytics/repository';
+import { AnalyticsService } from './modules/analytics/service';
+import { createAnalyticsModule } from './modules/analytics/module';
 
 /**
  * Builds and configures the Fastify application.
@@ -103,6 +106,7 @@ export function buildApp(
     const facebookAccountRepo = new FacebookAccountRepository(dataSource);
     const postRepo = new PostRepository(dataSource);
     const auditLogRepo = new AuditLogRepository(dataSource);
+    const postMetricRepo = new PostMetricRepository(dataSource);
 
     // Providers
     const clerkProvider = new ClerkProvider();
@@ -124,11 +128,23 @@ export function buildApp(
       auditLogRepo,
       postScheduler
     );
+    const analyticsService = new AnalyticsService(
+      userRepo,
+      postRepo,
+      postMetricRepo,
+      facebookAccountRepo,
+      facebookService,
+      auditLogRepo
+    );
 
     // Modules
     const authModule = createAuthModule(authService, clerkProvider);
     const facebookModule = createFacebookModule(facebookService, authService);
     const postModule = createPostModule(postService, authService);
+    const analyticsModule = createAnalyticsModule(
+      analyticsService,
+      authService
+    );
 
     app.register(authModule.routes.bind(authModule), {
       prefix: '/api/v1/auth'
@@ -138,6 +154,9 @@ export function buildApp(
     });
     app.register(postModule.routes.bind(postModule), {
       prefix: '/api/v1/posts'
+    });
+    app.register(analyticsModule.routes.bind(analyticsModule), {
+      prefix: '/api/v1/analytics'
     });
   }
 
