@@ -11,7 +11,7 @@ import type {
   FacebookAccountRepositoryPort,
   FacebookServicePort
 } from '@/modules/facebook/ports';
-import type { AuditLogWritePort } from '@/modules/audit-logs/ports';
+import type { AuditLogWriterPort } from '@/modules/audit-logs/ports';
 import type { AnalyticsOverviewDto, AnalyticsPostDto } from '../contracts';
 import type { UserEntity } from '@/modules/users/entity';
 
@@ -25,7 +25,7 @@ export class AnalyticsService
     private readonly postMetricRepo: PostMetricRepositoryPort,
     private readonly facebookAccountRepo: FacebookAccountRepositoryPort,
     private readonly facebookService: FacebookServicePort,
-    private readonly auditLogRepo: AuditLogWritePort
+    private readonly auditLogRepo: AuditLogWriterPort
   ) {
     super();
   }

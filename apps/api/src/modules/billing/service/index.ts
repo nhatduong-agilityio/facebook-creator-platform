@@ -13,7 +13,7 @@ import type {
 import type { UserStripeBillingPort } from '@/modules/users/ports';
 import type { PlanRepositoryPort } from '@/modules/plans/ports';
 import type { SubscriptionRepositoryPort } from '@/modules/subscriptions/ports';
-import type { AuditLogWritePort } from '@/modules/audit-logs/ports';
+import type { AuditLogWriterPort } from '@/modules/audit-logs/ports';
 import type { UserEntity } from '@/modules/users/entity';
 import {
   ConflictError,
@@ -33,7 +33,7 @@ export class BillingService extends BaseService implements BillingServicePort {
     private readonly userRepo: UserStripeBillingPort,
     private readonly planRepo: PlanRepositoryPort,
     private readonly subscriptionRepo: SubscriptionRepositoryPort,
-    private readonly auditLogRepo: AuditLogWritePort,
+    private readonly auditLogRepo: AuditLogWriterPort,
     private readonly stripeProvider: StripeBillingProviderPort
   ) {
     super();
