@@ -70,10 +70,14 @@ export function buildApp(
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
   });
 
-  app.register(clerkPlugin, {
-    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
-    secretKey: process.env.CLERK_SECRET_KEY
-  });
+  if (process.env.CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY) {
+    app.register(clerkPlugin, {
+      publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+      secretKey: process.env.CLERK_SECRET_KEY
+    });
+  } else {
+    app.log.warn('No Clerk keys found in env vars. Skipping Clerk plugin.');
+  }
 
   // Raw body parser
   // Stripe webhooks require the raw Buffer to verify the signature.
@@ -98,9 +102,7 @@ export function buildApp(
   // on DB-unrelated restarts. Add a /health/ready route for readiness checks.
   app.get('/health', async (_req, reply) => {
     return reply.send({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: Math.floor(process.uptime())
+      status: dataSource?.isInitialized ? 'ok' : 'unhealthy'
     });
   });
 
