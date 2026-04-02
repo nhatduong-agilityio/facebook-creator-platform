@@ -19,7 +19,7 @@ export type ClerkWebhookEventPayload = {
   };
 };
 
-export interface ClerkIdentifyProviderPort {
+export interface ClerkIdentityProviderPort {
   getUserProfile(clerkUserId: string): Promise<ClerkUserProfile>;
 }
 
