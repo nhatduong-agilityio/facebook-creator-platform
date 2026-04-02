@@ -3,12 +3,12 @@ import { BaseRepository } from '@/shared/repository';
 
 // Types
 import { AuditLogEntity } from '../entity';
-import type { AuditLogEntryInput, AuditLogWritePort } from '../ports';
+import type { AuditLogEntryInput, AuditLogWriterPort } from '../ports';
 import type { DataSource } from 'typeorm';
 
 export class AuditLogRepository
   extends BaseRepository<AuditLogEntity>
-  implements AuditLogWritePort
+  implements AuditLogWriterPort
 {
   constructor(dataSource: DataSource) {
     super(dataSource, AuditLogEntity);

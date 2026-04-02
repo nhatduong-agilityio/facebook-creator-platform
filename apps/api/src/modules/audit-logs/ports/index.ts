@@ -8,6 +8,6 @@ export type AuditLogEntryInput = {
   metadata?: Record<string, unknown> | null;
 };
 
-export interface AuditLogWritePort {
+export interface AuditLogWriterPort {
   createEntry(data: AuditLogEntryInput): Promise<AuditLogEntity>;
 }

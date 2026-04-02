@@ -24,14 +24,14 @@ import type {
   SchedulePostBodyDto,
   UpdatePostBodyDto
 } from '../contracts';
-import type { AuditLogWritePort } from '@/modules/audit-logs/ports';
+import type { AuditLogWriterPort } from '@/modules/audit-logs/ports';
 
 export class PostService extends BaseService implements PostServicePort {
   constructor(
     private readonly userRepo: UserLookupPort,
     private readonly postRepo: PostRepositoryPort,
     private readonly facebookService: FacebookServicePort,
-    private readonly auditLogRepo: AuditLogWritePort,
+    private readonly auditLogRepo: AuditLogWriterPort,
     private readonly postScheduler: PostSchedulerPort
   ) {
     super();

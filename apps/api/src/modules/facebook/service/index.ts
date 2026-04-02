@@ -12,7 +12,7 @@ import type { UserLookupPort } from '@/modules/users/ports';
 import type { FacebookAccountEntity } from '../entity';
 import type { UserEntity } from '@/modules/users/entity';
 import type { FacebookPostMetricsDto } from '../contracts';
-import type { AuditLogWritePort } from '@/modules/audit-logs/ports';
+import type { AuditLogWriterPort } from '@/modules/audit-logs/ports';
 
 export class FacebookService
   extends BaseService
@@ -21,7 +21,7 @@ export class FacebookService
   constructor(
     private readonly userRepo: UserLookupPort,
     private readonly accountRepo: FacebookAccountRepositoryPort,
-    private readonly auditLogRepo: AuditLogWritePort,
+    private readonly auditLogRepo: AuditLogWriterPort,
     private readonly facebookProvider: FacebookProviderPort
   ) {
     super();
