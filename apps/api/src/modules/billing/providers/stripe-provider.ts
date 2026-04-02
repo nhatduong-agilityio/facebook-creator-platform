@@ -4,10 +4,10 @@ import type {
   StripeSubscriptionSnapshot,
   StripeWebhookEventPayload
 } from '../ports';
-import { stripe } from '@/config/stripe';
+import { getStripeClient } from '@/config/stripe';
 
 export class StripeProvider implements StripeBillingProviderPort {
-  constructor(private readonly stripeClient: Stripe = stripe) {}
+  constructor(private readonly stripeClient: Stripe = getStripeClient()) {}
 
   /**
    * Creates a new Stripe customer with the provided email and name.
