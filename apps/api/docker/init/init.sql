@@ -1,1 +1,2 @@
 CREATE DATABASE fcp_test;
+CREATE DATABASE fcp_dev;
