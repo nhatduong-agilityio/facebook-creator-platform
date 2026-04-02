@@ -132,7 +132,7 @@ export class PostService extends BaseService implements PostServicePort {
       userId: user.id,
       action: 'post.updated',
       entityType: 'post',
-      entityId: updatePost.id
+      entityId: post.id
     });
 
     return updatePost;

@@ -66,7 +66,7 @@ export class AuthController extends BaseController {
       { preHandler: protectedHandlers },
       this.me.bind(this)
     );
-    fastify.post('/webhook/clerk', this.clerkWebhook.bind(this));
+    fastify.post('/webhooks/clerk', this.clerkWebhook.bind(this));
   }
 
   /**
