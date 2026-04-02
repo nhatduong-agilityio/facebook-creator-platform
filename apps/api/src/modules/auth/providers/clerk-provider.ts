@@ -2,7 +2,7 @@ import { clerkClient } from '@clerk/fastify';
 
 // Types
 import type {
-  ClerkIdentifyProviderPort,
+  ClerkIdentityProviderPort,
   ClerkUserProfile,
   ClerkWebhookEventPayload,
   ClerkWebhookVerifierPort
@@ -11,7 +11,7 @@ import type { FastifyRequest } from 'fastify';
 import { verifyWebhook } from '@clerk/fastify/webhooks';
 
 export class ClerkProvider
-  implements ClerkIdentifyProviderPort, ClerkWebhookVerifierPort
+  implements ClerkIdentityProviderPort, ClerkWebhookVerifierPort
 {
   private readonly fallbackEmailDomain = 'clerk.local';
 

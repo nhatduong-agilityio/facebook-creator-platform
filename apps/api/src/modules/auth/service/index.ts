@@ -5,7 +5,7 @@ import { BaseService } from '@/shared/service';
 import type { UserEntity } from '@/modules/users/entity';
 import type {
   AuthServicePort,
-  ClerkIdentifyProviderPort,
+  ClerkIdentityProviderPort,
   ClerkWebhookEventPayload
 } from '../ports';
 import type { UserClerkSyncPort } from '@/modules/users/ports';
@@ -13,7 +13,7 @@ import type { UserClerkSyncPort } from '@/modules/users/ports';
 export class AuthService extends BaseService implements AuthServicePort {
   constructor(
     private readonly userRepo: UserClerkSyncPort,
-    private readonly clerkProvider: ClerkIdentifyProviderPort
+    private readonly clerkProvider: ClerkIdentityProviderPort
   ) {
     super();
   }
