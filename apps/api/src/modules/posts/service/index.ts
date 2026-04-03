@@ -25,6 +25,10 @@ import type {
   UpdatePostBodyDto
 } from '../contracts';
 import type { AuditLogWriterPort } from '@/modules/audit-logs/ports';
+import {
+  deleteStoredMediaIfOwned,
+  persistUploadedMedia
+} from '../media-storage';
 
 export class PostService extends BaseService implements PostServicePort {
   constructor(
@@ -65,13 +69,16 @@ export class PostService extends BaseService implements PostServicePort {
           input.facebookAccountId
         )
       : null;
+    const mediaUrl = input.mediaUpload
+      ? await persistUploadedMedia(input.mediaUpload)
+      : input.mediaUrl?.trim() || null;
 
     const post = await this.postRepo.savePost({
       userId: user.id,
       facebookAccountId: account?.id ?? null,
       title: input.title?.trim() || null,
       content: input.content.trim(),
-      mediaUrl: input.mediaUrl?.trim() || null,
+      mediaUrl,
       status: POST_STATUSES[0],
       scheduledAt: null,
       publishedAt: null,
@@ -113,6 +120,7 @@ export class PostService extends BaseService implements PostServicePort {
                 input.facebookAccountId
               )
             ).id;
+    const mediaUrl = await this.resolveUpdatedMediaUrl(post.mediaUrl, input);
 
     const updatePost = await this.postRepo.savePost({
       ...post,
@@ -121,10 +129,7 @@ export class PostService extends BaseService implements PostServicePort {
         input.title === undefined ? post.title : input.title.trim() || null,
       content:
         input.content === undefined ? post.content : input.content.trim(),
-      mediaUrl:
-        input.mediaUrl === undefined
-          ? post.mediaUrl
-          : input.mediaUrl?.trim() || null
+      mediaUrl
     });
 
     // Create audit log entry for the post
@@ -146,6 +151,7 @@ export class PostService extends BaseService implements PostServicePort {
       throw new ConflictError('Published posts cannot be deleted');
     }
 
+    await deleteStoredMediaIfOwned(post.mediaUrl);
     await this.postRepo.delete(post.id);
 
     // Create audit log entry for the post
@@ -285,6 +291,7 @@ export class PostService extends BaseService implements PostServicePort {
     );
 
     const publishResult = await this.facebookService.publishPost(account, {
+      title: post.title,
       content: post.content,
       mediaUrl: post.mediaUrl
     });
@@ -321,5 +328,32 @@ export class PostService extends BaseService implements PostServicePort {
     }
 
     return user;
+  }
+
+  private async resolveUpdatedMediaUrl(
+    currentMediaUrl: string | null,
+    input: UpdatePostBodyDto
+  ): Promise<string | null> {
+    if (input.mediaUpload) {
+      const storedMediaUrl = await persistUploadedMedia(input.mediaUpload);
+
+      if (currentMediaUrl && currentMediaUrl !== storedMediaUrl) {
+        await deleteStoredMediaIfOwned(currentMediaUrl);
+      }
+
+      return storedMediaUrl;
+    }
+
+    if (input.mediaUrl === undefined) {
+      return currentMediaUrl;
+    }
+
+    const nextMediaUrl = input.mediaUrl?.trim() || null;
+
+    if (currentMediaUrl && currentMediaUrl !== nextMediaUrl) {
+      await deleteStoredMediaIfOwned(currentMediaUrl);
+    }
+
+    return nextMediaUrl;
   }
 }

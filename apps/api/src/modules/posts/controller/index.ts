@@ -15,11 +15,13 @@ import { clerkAuthMiddleware } from '@/middlewares/clerk-auth';
 // Contracts
 import {
   createPostBodySchema,
+  postMediaParamsSchema,
   postParamsSchema,
   schedulePostBodySchema,
   toPostDto,
   updatePostBodySchema
 } from '../contracts';
+import { readStoredMediaFileByName } from '../media-storage';
 
 export class PostController extends BaseController {
   private readonly authContextMiddleware: ReturnType<
@@ -46,6 +48,7 @@ export class PostController extends BaseController {
     ];
 
     fastify.get('/', { preHandler: protectedHandlers }, this.list.bind(this));
+    fastify.get('/media/:fileName', this.media.bind(this));
     fastify.post('', { preHandler: protectedHandlers }, this.create.bind(this));
     fastify.put(
       '/:id',
@@ -53,7 +56,7 @@ export class PostController extends BaseController {
       this.update.bind(this)
     );
     fastify.delete(
-      '/posts/:id',
+      '/:id',
       { preHandler: protectedHandlers },
       this.remove.bind(this)
     );
@@ -76,6 +79,16 @@ export class PostController extends BaseController {
       success: true,
       data: posts.map(post => toPostDto(post))
     });
+  }
+
+  private async media(req: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const params = postMediaParamsSchema.parse(req.params);
+    const media = await readStoredMediaFileByName(params.fileName);
+
+    return reply
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .type(media.mimeType)
+      .send(media.buffer);
   }
 
   private async create(

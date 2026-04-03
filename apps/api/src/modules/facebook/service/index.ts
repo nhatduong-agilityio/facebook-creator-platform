@@ -133,11 +133,12 @@ export class FacebookService
    */
   async publishPost(
     account: FacebookAccountEntity,
-    post: { content: string; mediaUrl?: string | null }
+    post: { title?: string | null; content: string; mediaUrl?: string | null }
   ): Promise<{ facebookPostId: string }> {
     return await this.facebookProvider.publishPagePost({
       pageId: account.pageId,
       accessToken: account.accessToken,
+      title: post.title,
       content: post.content,
       mediaUrl: post.mediaUrl
     });
@@ -156,6 +157,18 @@ export class FacebookService
     return await this.facebookProvider.fetchPostMetrics({
       accessToken: account.accessToken,
       facebookPostId
+    });
+  }
+
+  async commentOnPost(
+    account: FacebookAccountEntity,
+    facebookPostId: string,
+    message: string
+  ): Promise<{ commentId: string }> {
+    return await this.facebookProvider.commentOnPost({
+      accessToken: account.accessToken,
+      facebookPostId,
+      message
     });
   }
 
