@@ -24,6 +24,8 @@ import { AuditLogRepository } from './modules/audit-logs/repository';
 import { PostMetricRepository } from './modules/analytics/repository';
 import { AnalyticsService } from './modules/analytics/service';
 import { createAnalyticsModule } from './modules/analytics/module';
+import { CommentsService } from './modules/comments/service';
+import { createCommentsModule } from './modules/comments/module';
 import { SubscriptionRepository } from './modules/subscriptions/repository';
 import { StripeProvider } from './modules/billing/providers/stripe-provider';
 import { BillingService } from './modules/billing/service';
@@ -47,6 +49,7 @@ export function buildApp(
 
   const app = fastify({
     logger: loggerOpt ?? { level: process.env.LOG_LEVEL ?? 'info' },
+    bodyLimit: Number(process.env.API_BODY_LIMIT_BYTES ?? 25 * 1024 * 1024),
     // Allows Fastify to use Error.cause for better error context
     routerOptions: {
       ignoreDuplicateSlashes: true
@@ -146,6 +149,11 @@ export function buildApp(
       facebookService,
       auditLogRepo
     );
+    const commentsService = new CommentsService(
+      postRepo,
+      facebookService,
+      auditLogRepo
+    );
     const billingService = new BillingService(
       userRepo,
       planRepo,
@@ -171,6 +179,7 @@ export function buildApp(
       billingService,
       authService
     );
+    const commentsModule = createCommentsModule(commentsService, authService);
     const billingModule = createBillingModule(billingService, authService);
 
     app.register(authModule.routes.bind(authModule), {
@@ -184,6 +193,9 @@ export function buildApp(
     });
     app.register(analyticsModule.routes.bind(analyticsModule), {
       prefix: '/api/v1/analytics'
+    });
+    app.register(commentsModule.routes.bind(commentsModule), {
+      prefix: '/api/v1/comments'
     });
     app.register(billingModule.routes.bind(billingModule), {
       prefix: '/api/v1/billing'

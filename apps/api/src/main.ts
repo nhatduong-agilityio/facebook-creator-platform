@@ -1,11 +1,9 @@
 import 'reflect-metadata';
-import * as dotenv from 'dotenv';
+import './load-env';
 import { buildApp } from './app';
 import { closeDb, initializeDb } from './config/database';
 import type { DataSource } from 'typeorm';
 import { PlanRepository } from './modules/plans/repository';
-
-dotenv.config();
 
 /**
  * Application entry point.

@@ -1,12 +1,10 @@
 import 'reflect-metadata';
-import * as dotenv from 'dotenv';
+import './load-env';
 import type { DataSource } from 'typeorm';
 
 import { closeDb, initializeDb } from './config/database';
 import { startWorkers } from './modules/jobs/workers';
 import { PlanRepository } from './modules/plans/repository';
-
-dotenv.config();
 
 async function bootstrapWorker(): Promise<void> {
   let dataSource: DataSource | undefined;

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import '@/load-env';
 import path from 'path';
 import { DataSource } from 'typeorm';
 import { UserEntity } from '@/modules/users/entity';
