@@ -46,6 +46,7 @@ export interface FacebookProviderPort {
   publishPagePost(input: {
     pageId: string;
     accessToken: string;
+    title?: string | null;
     content: string;
     mediaUrl?: string | null;
   }): Promise<{ facebookPostId: string }>;
@@ -53,6 +54,11 @@ export interface FacebookProviderPort {
     accessToken: string;
     facebookPostId: string;
   }): Promise<FacebookPostMetricsDto>;
+  commentOnPost(input: {
+    accessToken: string;
+    facebookPostId: string;
+    message: string;
+  }): Promise<{ commentId: string }>;
 }
 
 export interface FacebookServicePort {
@@ -74,6 +80,7 @@ export interface FacebookServicePort {
   publishPost(
     account: FacebookAccountEntity,
     post: {
+      title?: string | null;
       content: string;
       mediaUrl?: string | null;
     }
@@ -82,4 +89,9 @@ export interface FacebookServicePort {
     account: FacebookAccountEntity,
     facebookPostId: string
   ): Promise<FacebookPostMetricsDto>;
+  commentOnPost(
+    account: FacebookAccountEntity,
+    facebookPostId: string,
+    message: string
+  ): Promise<{ commentId: string }>;
 }

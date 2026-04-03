@@ -1,6 +1,12 @@
+import { basename } from 'node:path';
+
 // Shared
 import { ExternalServiceError, ValidationError } from '@/shared/errors/errors';
 import { FACEBOOK_PERMISSIONS } from '@/shared/constants/facebook';
+import {
+  inferMediaKind,
+  readStoredMediaFile
+} from '@/modules/posts/media-storage';
 
 // Types
 import type {
@@ -150,28 +156,57 @@ export class FacebookGraphProvider implements FacebookProviderPort {
   async publishPagePost(input: {
     pageId: string;
     accessToken: string;
+    title?: string | null;
     content: string;
     mediaUrl?: string | null;
   }): Promise<{ facebookPostId: string }> {
-    const params = new URLSearchParams({
-      message: input.content,
-      access_token: input.accessToken
-    });
+    const message = this.composePostMessage(input.title, input.content);
+    const mediaKind = inferMediaKind(input.mediaUrl);
 
-    if (input.mediaUrl) {
-      params.append('url', input.mediaUrl);
+    if (!input.mediaUrl || !mediaKind) {
+      const params = new URLSearchParams({
+        message,
+        access_token: input.accessToken
+      });
+
+      if (input.mediaUrl) {
+        params.append('link', input.mediaUrl);
+      }
+
+      const response = await this.request<{ id: string }>(
+        `https://graph.facebook.com/v23.0/${input.pageId}/feed`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params
+        }
+      );
+
+      return { facebookPostId: response.id };
     }
 
-    const response = await this.request<{ id: string }>(
-      `https://graph.facebook.com/v23.0/${input.pageId}/feed`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params
-      }
-    );
+    const localFile = this.isStoredUploadUrl(input.mediaUrl)
+      ? await readStoredMediaFile(input.mediaUrl)
+      : null;
 
-    return { facebookPostId: response.id };
+    if (mediaKind === 'image') {
+      return await this.publishPhoto({
+        pageId: input.pageId,
+        accessToken: input.accessToken,
+        caption: message,
+        mediaUrl: input.mediaUrl,
+        localFile
+      });
+    }
+
+    return await this.publishVideo({
+      pageId: input.pageId,
+      accessToken: input.accessToken,
+      title: input.title ?? null,
+      description: message,
+      mediaUrl: input.mediaUrl,
+      localFile
+    });
   }
 
   /**
@@ -215,6 +250,28 @@ export class FacebookGraphProvider implements FacebookProviderPort {
     };
   }
 
+  async commentOnPost(input: {
+    accessToken: string;
+    facebookPostId: string;
+    message: string;
+  }): Promise<{ commentId: string }> {
+    const params = new URLSearchParams({
+      message: input.message,
+      access_token: input.accessToken
+    });
+
+    const response = await this.request<{ id: string }>(
+      `https://graph.facebook.com/v23.0/${input.facebookPostId}/comments`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      }
+    );
+
+    return { commentId: response.id };
+  }
+
   /**
    * Makes a request to the Facebook API.
    * @param {string | URL} input - the input string or URL to make the request to
@@ -236,5 +293,160 @@ export class FacebookGraphProvider implements FacebookProviderPort {
     }
 
     return (await response.json()) as T;
+  }
+
+  private composePostMessage(
+    title?: string | null,
+    content?: string | null
+  ): string {
+    const segments = [title?.trim(), content?.trim()].filter(
+      (segment): segment is string => Boolean(segment)
+    );
+
+    if (!segments.length) {
+      throw new ValidationError('Post content is required before publishing');
+    }
+
+    return segments.join('\n\n');
+  }
+
+  private isStoredUploadUrl(mediaUrl: string): boolean {
+    try {
+      return new URL(mediaUrl).pathname.startsWith('/api/v1/posts/media/');
+    } catch {
+      return false;
+    }
+  }
+
+  private async publishPhoto(input: {
+    pageId: string;
+    accessToken: string;
+    caption: string;
+    mediaUrl: string;
+    localFile: Awaited<ReturnType<typeof readStoredMediaFile>> | null;
+  }): Promise<{ facebookPostId: string }> {
+    if (input.localFile) {
+      const response = await this.requestMultipart<{ id: string }>(
+        `https://graph.facebook.com/v23.0/${input.pageId}/photos`,
+        {
+          access_token: input.accessToken,
+          caption: input.caption
+        },
+        {
+          fieldName: 'source',
+          fileName: input.localFile.fileName,
+          mimeType: input.localFile.mimeType,
+          buffer: input.localFile.buffer
+        }
+      );
+
+      return { facebookPostId: response.id };
+    }
+
+    const params = new URLSearchParams({
+      access_token: input.accessToken,
+      url: input.mediaUrl,
+      caption: input.caption
+    });
+
+    const response = await this.request<{ id: string }>(
+      `https://graph.facebook.com/v23.0/${input.pageId}/photos`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      }
+    );
+
+    return { facebookPostId: response.id };
+  }
+
+  private async publishVideo(input: {
+    pageId: string;
+    accessToken: string;
+    title: string | null;
+    description: string;
+    mediaUrl: string;
+    localFile: Awaited<ReturnType<typeof readStoredMediaFile>> | null;
+  }): Promise<{ facebookPostId: string }> {
+    if (input.localFile) {
+      const response = await this.requestMultipart<{ id: string }>(
+        `https://graph.facebook.com/v23.0/${input.pageId}/videos`,
+        {
+          access_token: input.accessToken,
+          description: input.description,
+          ...(input.title ? { title: input.title } : {})
+        },
+        {
+          fieldName: 'source',
+          fileName: input.localFile.fileName,
+          mimeType: input.localFile.mimeType,
+          buffer: input.localFile.buffer
+        }
+      );
+
+      return { facebookPostId: response.id };
+    }
+
+    const params = new URLSearchParams({
+      access_token: input.accessToken,
+      file_url: input.mediaUrl,
+      description: input.description
+    });
+
+    if (input.title) {
+      params.append('title', input.title);
+    }
+
+    const response = await this.request<{ id: string }>(
+      `https://graph.facebook.com/v23.0/${input.pageId}/videos`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+      }
+    );
+
+    return { facebookPostId: response.id };
+  }
+
+  private async requestMultipart<T>(
+    url: string,
+    fields: Record<string, string>,
+    file: {
+      fieldName: string;
+      fileName: string;
+      mimeType: string;
+      buffer: Buffer;
+    }
+  ): Promise<T> {
+    const boundary = `----fb-platform-${Date.now().toString(16)}`;
+    const chunks: Buffer[] = [];
+
+    for (const [key, value] of Object.entries(fields)) {
+      chunks.push(
+        Buffer.from(
+          `--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`
+        )
+      );
+    }
+
+    chunks.push(
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="${file.fieldName}"; filename="${basename(file.fileName)}"\r\nContent-Type: ${file.mimeType}\r\n\r\n`
+      )
+    );
+    chunks.push(file.buffer);
+    chunks.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+
+    const response = await this.request<T>(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`
+      },
+      body: Buffer.concat(chunks)
+    });
+
+    return response;
   }
 }
