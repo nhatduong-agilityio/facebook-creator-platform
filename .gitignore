@@ -7,6 +7,7 @@ node_modules/
 dist/
 .next/
 out/
+apps/api/uploads/
 
 # Environment files — NEVER commit real secrets
 .env
