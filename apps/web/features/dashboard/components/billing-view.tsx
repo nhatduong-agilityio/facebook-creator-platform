@@ -42,8 +42,7 @@ export function BillingView() {
     <>
       <PageHeader
         eyebrow="Billing"
-        title="Control access, limits, and upgrade timing"
-        description="Keep plan state, operational limits, and Stripe checkout in one place so teams always know when Free is enough and when Pro is justified."
+        title="Billing"
         tags={
           <>
             <GlassTag tone={currentPlan?.isPro ? 'success' : 'accent'}>
@@ -128,11 +127,7 @@ export function BillingView() {
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="space-y-5 p-5">
-          <SectionHeading
-            eyebrow="Usage"
-            title="Current workspace usage"
-            description="Watch the two limits that matter most: stored content volume and the active scheduled queue."
-          />
+          <SectionHeading eyebrow="Usage" title="Current usage" />
 
           <div className="space-y-4">
             {usageBreakdown.map(item => (
@@ -181,11 +176,7 @@ export function BillingView() {
         </Card>
 
         <Card className="space-y-5 p-5">
-          <SectionHeading
-            eyebrow="Plans"
-            title="Free versus Pro"
-            description="Keep the upgrade decision practical: compare queue room, publishing headroom, and when the current operating pattern starts to outgrow Free."
-          />
+          <SectionHeading eyebrow="Plans" title="Free and Pro" />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className={`${subtlePanelClassName} p-5 shadow-none`}>
@@ -219,11 +210,7 @@ export function BillingView() {
             className={`${subtlePanelClassName} grid gap-4 p-5 shadow-none lg:grid-cols-[1fr_auto]`}
           >
             <div>
-              <p className="text-lg font-semibold">Upgrade decision support</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-                If the scheduled queue fills up often or your team needs more
-                campaign headroom, Pro removes the daily friction points first.
-              </p>
+              <p className="text-lg font-semibold">Upgrade</p>
             </div>
             <div className="flex items-center">
               <Button
@@ -242,8 +229,8 @@ export function BillingView() {
             <Card className={`${subtlePanelClassName} p-4 shadow-none`}>
               <p className="font-semibold">Billing history</p>
               <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-                The current API only exposes subscription state, so this area is
-                prepared for invoice history once Stripe history sync is added.
+                Subscription state is available now. Invoice history is not
+                available yet.
               </p>
             </Card>
             <Card className={`${subtlePanelClassName} p-4 shadow-none`}>

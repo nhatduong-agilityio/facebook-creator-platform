@@ -21,9 +21,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   return (
     <main
       id="main-content"
-      className="min-h-screen bg-[linear-gradient(180deg,var(--background),var(--background-alt))] text-[var(--foreground)]"
+      className="min-h-screen bg-background text-foreground"
     >
-      <div className="mx-auto flex w-full max-w-[1680px] gap-5 px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1600px] gap-6 px-4 sm:px-6 lg:px-8">
         <DashboardSidebar
           accountName={
             sessionQuery.data?.name ?? sessionQuery.data?.email ?? 'Loading'
@@ -33,12 +33,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           connectedPages={connectedPages}
         />
 
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col gap-5">
-          <div className="mx-auto w-full max-w-7xl">
-            <DashboardTopbar connectedPages={connectedPages} />
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <div className="sticky top-0 z-40 border-b border-border bg-background/92 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 ">
+            <div className="mx-auto w-full px-4 sm:px-6">
+              <DashboardTopbar connectedPages={connectedPages} />
+            </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 pb-8">
+          <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 py-4 pb-8">
             {children}
           </div>
         </div>

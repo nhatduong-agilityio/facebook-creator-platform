@@ -44,6 +44,7 @@ function resolveTheme(theme: ThemePreference): ResolvedTheme {
 }
 
 function applyResolvedTheme(theme: ResolvedTheme) {
+  document.documentElement.classList.toggle('dark', theme === 'dark');
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
 }

@@ -4,15 +4,16 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const alertVariants = cva(
-  'relative w-full rounded-[1rem] border px-4 py-4 text-sm shadow-[var(--shadow-soft)]',
+  'relative w-full rounded-xl border px-4 py-4 text-sm shadow-sm',
   {
     variants: {
       variant: {
-        default:
-          'border-[var(--line)] bg-[var(--panel-muted)] text-[var(--foreground)]',
-        danger: 'surface-danger text-[var(--danger)]',
-        success: 'surface-success text-[var(--success)]',
-        warning: 'surface-warning text-[var(--warning)]'
+        default: 'border-border bg-card text-card-foreground',
+        danger: 'border-destructive/20 bg-destructive/10 text-destructive',
+        success:
+          'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+        warning:
+          'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400'
       }
     },
     defaultVariants: {

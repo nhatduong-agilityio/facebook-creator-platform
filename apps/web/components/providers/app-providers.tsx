@@ -14,13 +14,13 @@ import {
 function clerkAppearance(theme: ResolvedTheme) {
   return {
     variables: {
-      colorPrimary: theme === 'dark' ? '#ff8e75' : '#e8634a',
-      colorBackground: theme === 'dark' ? '#132943' : '#ffffff',
-      colorText: theme === 'dark' ? '#ffffff' : '#132943',
-      colorInputBackground: theme === 'dark' ? '#19314f' : '#eef3f9',
-      colorInputText: theme === 'dark' ? '#ffffff' : '#132943',
-      colorNeutral: theme === 'dark' ? '#b7cde3' : '#6b7f97',
-      borderRadius: '1rem'
+      colorPrimary: theme === 'dark' ? '#ea580c' : '#f97316',
+      colorBackground: theme === 'dark' ? '#0c0a09' : '#ffffff',
+      colorText: theme === 'dark' ? '#fafaf9' : '#1c1917',
+      colorInputBackground: theme === 'dark' ? '#1c1917' : '#ffffff',
+      colorInputText: theme === 'dark' ? '#fafaf9' : '#1c1917',
+      colorNeutral: theme === 'dark' ? '#a8a29e' : '#57534e',
+      borderRadius: '0.75rem'
     }
   } as const;
 }

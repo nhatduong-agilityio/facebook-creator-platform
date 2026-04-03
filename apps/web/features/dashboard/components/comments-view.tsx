@@ -19,6 +19,7 @@ import {
   TextAreaControl
 } from '@/components/ui/form-controls';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { useReplyToCommentsMutation } from '@/features/dashboard/hooks/use-dashboard-mutations';
 import {
   useDashboardAnalyticsPostsQuery,
   useDashboardPostsQuery
@@ -47,12 +48,12 @@ export function CommentsView() {
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState('');
-  const [replyStagedFor, setReplyStagedFor] = useState<string | null>(null);
   const [referenceNow] = useState(() => Date.now());
 
   const deferredSearch = useDeferredValue(search);
   const postsQuery = useDashboardPostsQuery();
   const analyticsPostsQuery = useDashboardAnalyticsPostsQuery();
+  const replyMutation = useReplyToCommentsMutation();
 
   const inboxItems = buildCommentInbox(
     analyticsPostsQuery.data ?? [],
@@ -102,8 +103,7 @@ export function CommentsView() {
     <>
       <PageHeader
         eyebrow="Comments"
-        title="Keep comment activity in one inbox"
-        description="Review the highest-signal conversations first, stay in context with the post, and prepare replies without leaving the workflow."
+        title="Comments"
         tags={
           <>
             <GlassTag tone="accent">
@@ -111,7 +111,7 @@ export function CommentsView() {
               {summary.activeThreads === 1 ? '' : 's'}
             </GlassTag>
             <GlassTag tone="warning">{summary.priority} priority</GlassTag>
-            <GlassTag tone="neutral">Reply workspace</GlassTag>
+            <GlassTag tone="neutral">Inbox</GlassTag>
           </>
         }
       />
@@ -146,11 +146,7 @@ export function CommentsView() {
       <section className="grid gap-4 xl:grid-cols-[0.94fr_1.06fr]">
         <Card className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <SectionHeading
-              eyebrow="Inbox"
-              title="Conversation queue"
-              description="Prioritize by volume, filter by post, and keep the inbox narrow enough to act quickly."
-            />
+            <SectionHeading eyebrow="Inbox" title="Conversation queue" />
 
             <Card className="bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--muted-foreground)] shadow-none">
               Showing {filteredItems.length}
@@ -219,7 +215,6 @@ export function CommentsView() {
                   className="w-full text-left"
                   onClick={() => {
                     setActiveItemId(item.id);
-                    setReplyStagedFor(null);
                   }}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -254,11 +249,7 @@ export function CommentsView() {
         </Card>
 
         <Card className="p-5">
-          <SectionHeading
-            eyebrow="Reply Workspace"
-            title="Prepare the next response"
-            description="Stay in context with the selected post, use faster reply starts, and stage the response before live sync is connected."
-          />
+          <SectionHeading eyebrow="Reply" title="Prepare the next response" />
 
           {activeItem ? (
             <div className="mt-6 space-y-4">
@@ -278,8 +269,8 @@ export function CommentsView() {
 
               <Card className="bg-[var(--panel-contrast)] p-5">
                 <div className="flex flex-wrap gap-2.5">
-                  <GlassTag tone="neutral">Draft reply</GlassTag>
-                  <GlassTag tone="warning">Sync pending</GlassTag>
+                  <GlassTag tone="neutral">Live reply</GlassTag>
+                  <GlassTag tone="success">Facebook sync</GlassTag>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -310,12 +301,20 @@ export function CommentsView() {
                   <Button
                     type="button"
                     onClick={() => {
-                      setReplyStagedFor(activeItem.id);
-                      setReplyDraft('');
+                      void replyMutation
+                        .mutateAsync({
+                          postId: activeItem.postId,
+                          message: replyDraft
+                        })
+                        .then(() => {
+                          setReplyDraft('');
+                        });
                     }}
-                    disabled={replyDraft.trim().length === 0}
+                    disabled={
+                      replyDraft.trim().length === 0 || replyMutation.isPending
+                    }
                   >
-                    Stage reply
+                    Send reply
                   </Button>
                   <Button
                     type="button"
@@ -327,13 +326,10 @@ export function CommentsView() {
                     Clear
                   </Button>
                 </div>
-                {replyStagedFor === activeItem.id ? (
-                  <Card className="mt-4 bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--muted-foreground)] shadow-none">
-                    Reply staged locally. Direct Facebook reply sync can slot
-                    into this workflow once the backend reply endpoint is
-                    available.
-                  </Card>
-                ) : null}
+                <Card className="mt-4 bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--muted-foreground)] shadow-none">
+                  Replies are posted to the Facebook post thread for the
+                  selected content item.
+                </Card>
               </Card>
             </div>
           ) : (
