@@ -14,7 +14,6 @@ import {
   subtlePanelClassName
 } from '@/components/ui/dashboard-primitives';
 import { InputControl } from '@/components/ui/form-controls';
-import { Label } from '@/components/ui/label';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useSchedulePostMutation } from '@/features/dashboard/hooks/use-dashboard-mutations';
 import {
@@ -101,8 +100,7 @@ export function SchedulerView() {
     <>
       <PageHeader
         eyebrow="Scheduler"
-        title="Scheduling console"
-        description="Move drafts into the calendar and adjust timing without leaving the queue."
+        title="Scheduler"
         tags={
           <>
             <GlassTag tone="accent">
@@ -126,12 +124,12 @@ export function SchedulerView() {
               ]}
               value={mode}
               onChange={setMode}
-              containerClassName="flex rounded-lg border border-[var(--line)] bg-[var(--panel)] p-1"
-              itemClassName="inline-flex rounded-md px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--accent)]"
-              activeClassName="bg-[var(--accent-soft)] text-[var(--accent-deep)]"
-              inactiveClassName="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              containerClassName="inline-flex rounded-xl border border-border bg-muted p-1"
+              itemClassName="inline-flex min-w-[96px] justify-center rounded-lg px-4 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
+              activeClassName="bg-background text-foreground shadow-sm"
+              inactiveClassName="text-muted-foreground hover:text-foreground"
             />
-            <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5">
+            <div className="flex items-center gap-1 rounded-xl border border-border bg-muted p-1">
               <Button
                 type="button"
                 variant="ghost"
@@ -158,6 +156,15 @@ export function SchedulerView() {
                 Next
               </Button>
             </div>
+            <InputControl
+              className="mt-0 h-9 w-[128px]"
+              type="time"
+              aria-label="Quick publish time"
+              value={quickTime}
+              onChange={event => {
+                setQuickTime(event.target.value);
+              }}
+            />
           </>
         }
       />
@@ -191,28 +198,10 @@ export function SchedulerView() {
 
       <section className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
         <Card className="p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <SectionHeading
-              eyebrow="Calendar"
-              title={mode === 'week' ? 'Weekly calendar' : 'Monthly calendar'}
-              description="Drag a draft into a day column and the selected publish time is applied automatically."
-            />
-
-            <Card className="bg-[var(--panel)] px-4 py-3 shadow-none">
-              <Label className="text-xs uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
-                Publish time
-              </Label>
-              <InputControl
-                className="mt-2 border-[var(--line)] bg-[var(--panel-muted)] px-4 py-2"
-                type="time"
-                aria-label="Quick publish time"
-                value={quickTime}
-                onChange={event => {
-                  setQuickTime(event.target.value);
-                }}
-              />
-            </Card>
-          </div>
+          <SectionHeading
+            eyebrow="Calendar"
+            title={mode === 'week' ? 'Weekly calendar' : 'Monthly calendar'}
+          />
 
           {mode === 'week' ? (
             <div className="mt-6 grid gap-3 xl:grid-cols-7">
@@ -250,23 +239,28 @@ export function SchedulerView() {
                     {column.slots.map(slot => (
                       <Card
                         key={slot.id}
-                        className={`${subtlePanelClassName} p-3 shadow-none`}
+                        className={`${subtlePanelClassName} overflow-hidden p-3 shadow-none`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold">{slot.title}</p>
+                        <p className="truncate text-sm font-semibold">
+                          {slot.title}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
                           <StatusBadge tone={getStatusTone(slot.status)}>
                             {formatPostStatus(slot.status)}
                           </StatusBadge>
+                          <span className="text-xs text-[var(--muted-foreground)]">
+                            {slot.timeLabel}
+                          </span>
                         </div>
-                        <p className="mt-2 text-xs text-[var(--muted-foreground)]">
-                          {slot.timeLabel} · {slot.accountLabel}
+                        <p className="mt-2 truncate text-xs text-[var(--muted-foreground)]">
+                          {slot.accountLabel}
                         </p>
                       </Card>
                     ))}
 
                     {column.slots.length === 0 ? (
-                      <Card className="border-dashed border-[var(--line-strong)] px-3 py-4 text-center text-sm text-[var(--muted-foreground)] shadow-none">
-                        Drop a post here
+                      <Card className="border-dashed border-[var(--line-strong)] px-3 py-5 text-center text-sm text-[var(--muted-foreground)] shadow-none">
+                        Drop here
                       </Card>
                     ) : null}
                   </div>
@@ -332,11 +326,7 @@ export function SchedulerView() {
         </Card>
 
         <Card className="p-5">
-          <SectionHeading
-            eyebrow="Queue"
-            title="Ready to schedule"
-            description="Drag a draft or scheduled post into the calendar to set or change the publish date."
-          />
+          <SectionHeading eyebrow="Queue" title="Ready to schedule" />
 
           <div className="mt-6 space-y-3">
             {queuePosts.map(post => (
@@ -349,11 +339,11 @@ export function SchedulerView() {
                 className={`${subtlePanelClassName} cursor-grab p-4 shadow-none active:cursor-grabbing`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">
                       {post.title ?? 'Untitled post'}
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--muted-foreground)]">
                       {post.content}
                     </p>
                   </div>
@@ -379,24 +369,10 @@ export function SchedulerView() {
 
           <div className="mt-6 grid gap-3">
             <Card className={`${subtlePanelClassName} p-4 shadow-none`}>
-              <p className="font-semibold">Smart scheduling suggestion</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-                Spread posts across the week so engagement does not cluster into
-                one narrow window.
-              </p>
-            </Card>
-            <Card className={`${subtlePanelClassName} p-4 shadow-none`}>
               <p className="font-semibold">Current publish time</p>
               <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
                 Drag-and-drop scheduling uses {quickTime} in{' '}
                 {timezone.replace('_', ' ')}.
-              </p>
-            </Card>
-            <Card className={`${subtlePanelClassName} p-4 shadow-none`}>
-              <p className="font-semibold">Legend</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-                Scheduled stays amber, published stays green, and failures
-                surface in rose for quick triage.
               </p>
             </Card>
           </div>

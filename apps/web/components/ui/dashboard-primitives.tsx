@@ -34,16 +34,16 @@ const accentClasses: Record<
 };
 
 export const subtlePanelClassName =
-  'rounded-[1rem] border border-[var(--line)] bg-[var(--panel-muted)] shadow-[var(--shadow-soft)]';
+  'rounded-xl border border-border bg-muted/40 shadow-sm';
 export const tilePanelClassName =
-  'rounded-[0.9rem] border border-[var(--line)] bg-[var(--panel-contrast)]';
-export const glassFieldsetClassName = 'glass-fieldset rounded-[1rem] p-5';
+  'rounded-lg border border-border bg-background';
+export const glassFieldsetClassName = 'glass-fieldset rounded-xl p-5';
 export const successPanelClassName =
-  'rounded-[1rem] surface-success text-[var(--success)]';
+  'rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400';
 export const warningPanelClassName =
-  'rounded-[1rem] surface-warning text-[var(--warning)]';
+  'rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400';
 export const dangerPanelClassName =
-  'rounded-[1rem] surface-danger text-[var(--danger)]';
+  'rounded-xl border border-destructive/20 bg-destructive/10 text-destructive';
 
 export function GlassTag({
   children,
@@ -54,12 +54,11 @@ export function GlassTag({
 }) {
   const tones = {
     neutral: 'text-[var(--foreground-soft)]',
-    accent:
-      'border-[color:color-mix(in_srgb,var(--accent)_26%,transparent)] bg-[var(--accent-soft)] text-[var(--accent-deep)]',
+    accent: 'border-primary/20 bg-primary/10 text-primary',
     success:
-      'border-[color:color-mix(in_srgb,var(--success)_26%,transparent)] bg-[var(--success-soft)] text-[var(--success)]',
+      'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     warning:
-      'border-[color:color-mix(in_srgb,var(--warning)_26%,transparent)] bg-[var(--warning-soft)] text-[var(--warning)]'
+      'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400'
   };
 
   return (
@@ -84,23 +83,23 @@ export function PageHeader({
 }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   actions?: ReactNode;
   tags?: ReactNode;
 }) {
   return (
-    <section className="space-y-3 border-b border-[var(--line)] pb-4">
+    <section className="space-y-2 border-b border-border pb-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-3xl">
-          <p className="eyebrow text-[11px] text-[var(--accent-secondary)]">
-            {eyebrow}
-          </p>
-          <h1 className="mt-2 text-[1.75rem] font-semibold tracking-[-0.045em] sm:text-[2rem]">
+          <p className="eyebrow text-[11px] text-primary">{eyebrow}</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
             {title}
           </h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)] sm:text-[15px]">
-            {description}
-          </p>
+          {description ? (
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
         </div>
 
         {actions ? (
@@ -130,19 +129,19 @@ export function SectionHeading({
 }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
 }) {
   return (
     <header>
-      <p className="eyebrow text-[11px] text-[var(--accent-secondary)]">
-        {eyebrow}
-      </p>
-      <h2 className="mt-2 text-[1.35rem] font-semibold tracking-[-0.03em]">
+      <p className="eyebrow text-[11px] text-primary">{eyebrow}</p>
+      <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
         {title}
       </h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted-foreground)]">
-        {description}
-      </p>
+      {description ? (
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+          {description}
+        </p>
+      ) : null}
     </header>
   );
 }
@@ -165,17 +164,17 @@ export function MetricCard({
       <CardHeader className="pb-0">
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${accentStyle.dot}`} />
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             {label}
           </p>
         </div>
       </CardHeader>
       <CardContent className="pt-4">
         <div className="flex items-end justify-between gap-4">
-          <p className="text-[2.5rem] font-semibold leading-none tracking-[-0.06em]">
+          <p className="text-[2.25rem] font-semibold leading-none tracking-tight">
             {value}
           </p>
-          <div className="hidden h-9 w-9 rounded-full border border-[var(--line)] bg-[var(--panel-contrast)] lg:flex lg:items-center lg:justify-center">
+          <div className="hidden h-9 w-9 rounded-full border border-border bg-muted lg:flex lg:items-center lg:justify-center">
             <span className={`h-2.5 w-2.5 rounded-full ${accentStyle.dot}`} />
           </div>
         </div>
@@ -203,11 +202,11 @@ export function InfoRow({
         'flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between'
       )}
     >
-      <span className="text-xs uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+      <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </span>
       <span
-        className={`text-sm text-[var(--foreground)] ${
+        className={`text-sm text-foreground ${
           mono ? 'font-mono break-all' : ''
         }`}
       >
@@ -248,7 +247,7 @@ export function EmptyState({
   return (
     <Card className="border-dashed border-[var(--line-strong)] bg-[var(--panel-muted)] px-5 py-8 text-center shadow-none">
       <p className="text-lg font-semibold">{title}</p>
-      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--muted-foreground)]">
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
         {description}
       </p>
       {action ? <div className="mt-5">{action}</div> : null}
@@ -286,7 +285,7 @@ export function LoadingPanel({ label }: { label: string }) {
       role="status"
       aria-live="polite"
       variant="default"
-      className="bg-[var(--panel-muted)] px-5 py-6 text-[var(--muted-foreground)]"
+      className="bg-muted/40 px-5 py-6 text-muted-foreground"
     >
       <AlertDescription className="mt-0">{label}</AlertDescription>
     </Alert>

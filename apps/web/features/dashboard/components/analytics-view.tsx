@@ -8,6 +8,7 @@ import {
   DonutChart,
   PostPerformanceBars
 } from '@/components/ui/dashboard-charts';
+import { PostMediaPreview } from '@/components/ui/post-media-preview';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
   EmptyState,
@@ -22,7 +23,8 @@ import {
 } from '@/components/ui/dashboard-primitives';
 import {
   useDashboardAnalyticsOverviewQuery,
-  useDashboardAnalyticsPostsQuery
+  useDashboardAnalyticsPostsQuery,
+  useDashboardPostsQuery
 } from '@/features/dashboard/hooks/use-dashboard-queries';
 import {
   buildEngagementMix,
@@ -31,6 +33,8 @@ import {
 } from '@/features/dashboard/lib/derivations';
 import {
   formatDate,
+  getPostDisplayTitle,
+  getPostExcerpt,
   formatNumber,
   getStatusTone
 } from '@/features/dashboard/lib/format';
@@ -39,6 +43,7 @@ export function AnalyticsView() {
   const [range, setRange] = useState<7 | 30>(30);
   const overviewQuery = useDashboardAnalyticsOverviewQuery();
   const postsQuery = useDashboardAnalyticsPostsQuery();
+  const contentPostsQuery = useDashboardPostsQuery();
 
   const trendSeries = buildPerformanceSeries(
     postsQuery.data ?? [],
@@ -52,13 +57,16 @@ export function AnalyticsView() {
       .sort((left, right) => right.metrics.engagement - left.metrics.engagement)
       .slice(0, 5);
   }, [postsQuery.data]);
+  const contentById = useMemo(
+    () => new Map((contentPostsQuery.data ?? []).map(post => [post.id, post])),
+    [contentPostsQuery.data]
+  );
 
   return (
     <>
       <PageHeader
         eyebrow="Analytics"
-        title="Read performance without digging through noise"
-        description="Track reach and engagement, isolate the posts driving results, and keep the current measurement window visible across the whole analytics surface."
+        title="Analytics"
         tags={
           <>
             <GlassTag tone="accent">{range} day view</GlassTag>
@@ -118,11 +126,7 @@ export function AnalyticsView() {
 
       <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
         <Card className="space-y-5 p-5">
-          <SectionHeading
-            eyebrow="Reach trend"
-            title="Performance curve"
-            description="Use this view to check whether current publishing is pushing distribution up, flattening out, or dropping."
-          />
+          <SectionHeading eyebrow="Reach trend" title="Performance curve" />
 
           <AreaTrendChart
             points={trendSeries}
@@ -131,11 +135,7 @@ export function AnalyticsView() {
         </Card>
 
         <Card className="space-y-5 p-5">
-          <SectionHeading
-            eyebrow="Mix"
-            title="Engagement distribution"
-            description="A compact breakdown of which interaction types are dominating the current content mix."
-          />
+          <SectionHeading eyebrow="Mix" title="Engagement distribution" />
 
           <DonutChart
             segments={engagementMix}
@@ -149,7 +149,6 @@ export function AnalyticsView() {
           <SectionHeading
             eyebrow="Top content"
             title="Posts pulling the strongest engagement"
-            description="Use this ranking to identify which content patterns are worth repeating in the next scheduling cycle."
           />
 
           {performanceBars.length > 0 ? (
@@ -166,55 +165,83 @@ export function AnalyticsView() {
           <SectionHeading
             eyebrow="Tracked posts"
             title="Per-post measurement log"
-            description="Each row keeps the latest metrics, publish state, and last successful fetch time visible in one operational list."
           />
 
           <div className="grid gap-3">
             {topPosts.map(post => (
               <article key={post.id} className="contents">
-                <Card
-                  className={`${subtlePanelClassName} grid gap-4 p-4 shadow-none xl:grid-cols-[1.15fr_0.85fr]`}
-                >
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-lg font-semibold">
-                        {post.title ?? 'Untitled post'}
-                      </h3>
-                      <StatusBadge tone={getStatusTone(post.status)}>
-                        {post.status}
-                      </StatusBadge>
-                    </div>
-                    <p className="text-sm text-[var(--muted-foreground)]">
-                      Facebook Post ID: {post.facebookPostId ?? 'Not published'}
-                    </p>
-                    <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
-                      Last fetched {formatDate(post.metrics.fetchedAt)}
-                    </p>
-                  </div>
+                {(() => {
+                  const contentPost = contentById.get(post.id);
+                  const displayTitle = getPostDisplayTitle(
+                    post.title ?? contentPost?.title,
+                    contentPost?.content
+                  );
 
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  return (
                     <Card
-                      className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
+                      className={`${subtlePanelClassName} grid gap-4 p-4 shadow-none xl:grid-cols-[1.15fr_0.85fr]`}
                     >
-                      Likes {formatNumber(post.metrics.likes)}
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-4">
+                          {contentPost?.mediaUrl ? (
+                            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel-muted)]">
+                              <PostMediaPreview
+                                mediaUrl={contentPost.mediaUrl}
+                                alt={displayTitle}
+                                emptyLabel="Media"
+                                videoClassName="bg-black"
+                              />
+                            </div>
+                          ) : null}
+
+                          <div className="min-w-0 space-y-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <h3 className="text-lg font-semibold">
+                                {displayTitle}
+                              </h3>
+                              <StatusBadge tone={getStatusTone(post.status)}>
+                                {post.status}
+                              </StatusBadge>
+                            </div>
+                            <p className="text-sm leading-6 text-[var(--muted-foreground)]">
+                              {getPostExcerpt(contentPost?.content, 120)}
+                            </p>
+                            <p className="text-sm text-[var(--muted-foreground)]">
+                              Facebook Post ID:{' '}
+                              {post.facebookPostId ?? 'Not published'}
+                            </p>
+                            <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+                              Last fetched {formatDate(post.metrics.fetchedAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Card
+                          className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
+                        >
+                          Likes {formatNumber(post.metrics.likes)}
+                        </Card>
+                        <Card
+                          className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
+                        >
+                          Comments {formatNumber(post.metrics.comments)}
+                        </Card>
+                        <Card
+                          className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
+                        >
+                          Reach {formatNumber(post.metrics.reach)}
+                        </Card>
+                        <Card
+                          className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
+                        >
+                          Engagement {formatNumber(post.metrics.engagement)}
+                        </Card>
+                      </div>
                     </Card>
-                    <Card
-                      className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
-                    >
-                      Comments {formatNumber(post.metrics.comments)}
-                    </Card>
-                    <Card
-                      className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
-                    >
-                      Reach {formatNumber(post.metrics.reach)}
-                    </Card>
-                    <Card
-                      className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
-                    >
-                      Engagement {formatNumber(post.metrics.engagement)}
-                    </Card>
-                  </div>
-                </Card>
+                  );
+                })()}
               </article>
             ))}
           </div>

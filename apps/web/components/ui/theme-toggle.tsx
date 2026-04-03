@@ -1,6 +1,8 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { LaptopMinimal, Moon, SunMedium } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
@@ -9,12 +11,40 @@ import {
 } from '@/components/providers/theme-provider';
 
 const options: Array<{
-  label: string;
+  label: ReactNode;
   value: ThemePreference;
+  title: string;
 }> = [
-  { label: 'Light', value: 'light' },
-  { label: 'System', value: 'system' },
-  { label: 'Dark', value: 'dark' }
+  {
+    label: (
+      <>
+        <SunMedium className="h-4 w-4" />
+        <span className="sr-only">Light</span>
+      </>
+    ),
+    value: 'light',
+    title: 'Light'
+  },
+  {
+    label: (
+      <>
+        <LaptopMinimal className="h-4 w-4" />
+        <span className="sr-only">System</span>
+      </>
+    ),
+    value: 'system',
+    title: 'System'
+  },
+  {
+    label: (
+      <>
+        <Moon className="h-4 w-4" />
+        <span className="sr-only">Dark</span>
+      </>
+    ),
+    value: 'dark',
+    title: 'Dark'
+  }
 ];
 
 const emptySubscribe = () => () => {};
@@ -35,7 +65,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       >
         {options.map(option => (
           <span key={option.value} className="theme-control-button">
-            <span className="text-sm font-medium">{option.label}</span>
+            {option.label}
           </span>
         ))}
       </div>

@@ -33,6 +33,12 @@ export type BillingSummary = {
   stripeSubscriptionId: string | null;
 };
 
+export type MediaUploadPayload = {
+  fileName: string;
+  mimeType: string;
+  base64Data: string;
+};
+
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed';
 
 export type PostRecord = {

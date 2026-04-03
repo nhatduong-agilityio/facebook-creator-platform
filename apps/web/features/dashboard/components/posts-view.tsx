@@ -1,13 +1,19 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent
+} from 'react';
 import { useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { PostMediaPreview } from '@/components/ui/post-media-preview';
 import {
   EmptyState,
   ErrorCallout,
@@ -49,37 +55,35 @@ import {
 } from '@/features/dashboard/lib/schemas';
 import {
   formatDate,
+  getMediaKind,
+  getPostDisplayTitle,
+  getPostExcerpt,
+  getSafeMediaUrl,
   formatPostStatus,
   getStatusTone,
   toDateTimeLocalValue
 } from '@/features/dashboard/lib/format';
+import type { MediaUploadPayload } from '@/features/dashboard/types';
 
 type PostFilter = 'all' | 'draft' | 'scheduled' | 'published' | 'failed';
+type MediaSource = 'url' | 'upload';
 
-function truncateCopy(value: string, max = 160) {
-  if (value.length <= max) {
-    return value;
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+async function fileToUploadPayload(file: File): Promise<MediaUploadPayload> {
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
   }
 
-  return `${value.slice(0, max).trim()}...`;
-}
-
-function getSafePreviewUrl(value?: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    const url = new URL(value);
-    const isSecure = url.protocol === 'https:';
-    const isLocalHttp =
-      url.protocol === 'http:' &&
-      ['localhost', '127.0.0.1'].includes(url.hostname);
-
-    return isSecure || isLocalHttp ? url.toString() : null;
-  } catch {
-    return null;
-  }
+  return {
+    fileName: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    base64Data: btoa(binary)
+  };
 }
 
 export function PostsView() {
@@ -94,6 +98,10 @@ export function PostsView() {
     {}
   );
   const [newScheduleAt, setNewScheduleAt] = useState('');
+  const [mediaSource, setMediaSource] = useState<MediaSource>('url');
+  const [selectedMediaFile, setSelectedMediaFile] = useState<File | null>(null);
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState<string | null>(null);
+  const [mediaInputError, setMediaInputError] = useState<string | null>(null);
 
   const deferredPostSearch = useDeferredValue(postSearch);
   const savePostMutation = useSavePostMutation(editingPostId);
@@ -113,6 +121,9 @@ export function PostsView() {
     if (!editingPost) {
       form.reset(emptyPostForm);
       setNewScheduleAt('');
+      setMediaSource('url');
+      setSelectedMediaFile(null);
+      setMediaInputError(null);
       return;
     }
 
@@ -123,7 +134,24 @@ export function PostsView() {
       facebookAccountId: editingPost.facebookAccountId ?? ''
     });
     setNewScheduleAt(toDateTimeLocalValue(editingPost.scheduledAt));
+    setMediaSource('url');
+    setSelectedMediaFile(null);
+    setMediaInputError(null);
   }, [editingPost, form]);
+
+  useEffect(() => {
+    if (!selectedMediaFile) {
+      setUploadPreviewUrl(null);
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(selectedMediaFile);
+    setUploadPreviewUrl(nextPreviewUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextPreviewUrl);
+    };
+  }, [selectedMediaFile]);
 
   const watchedValues = form.watch();
   const statusSummary = buildPostStatusSummary(postsQuery.data ?? []);
@@ -155,7 +183,18 @@ export function PostsView() {
   const selectedAccount = (accountsQuery.data ?? []).find(
     account => account.id === watchedValues.facebookAccountId
   );
-  const previewMediaUrl = getSafePreviewUrl(watchedValues.mediaUrl);
+  const previewMediaUrl =
+    mediaSource === 'upload'
+      ? uploadPreviewUrl
+      : getSafeMediaUrl(watchedValues.mediaUrl);
+  const previewMediaKind =
+    mediaSource === 'upload'
+      ? selectedMediaFile?.type.startsWith('video/')
+        ? 'video'
+        : selectedMediaFile?.type.startsWith('image/')
+          ? 'image'
+          : null
+      : getMediaKind(watchedValues.mediaUrl);
   const scheduledCount =
     statusSummary.find(item => item.status === 'scheduled')?.value ?? 0;
   const failedCount =
@@ -168,8 +207,7 @@ export function PostsView() {
     <>
       <PageHeader
         eyebrow="Content"
-        title="Run the content pipeline from one workspace"
-        description="Draft new posts, lock in schedule times, and act on queue items without switching between separate compose and management screens."
+        title="Posts"
         tags={
           <>
             <GlassTag tone="accent">
@@ -194,6 +232,9 @@ export function PostsView() {
                 setEditingPostId(null);
                 form.reset(emptyPostForm);
                 setNewScheduleAt('');
+                setMediaSource('url');
+                setSelectedMediaFile(null);
+                setMediaInputError(null);
               }}
             >
               New draft
@@ -237,16 +278,23 @@ export function PostsView() {
           <SectionHeading
             eyebrow="Compose"
             title={editingPost ? 'Update the selected post' : 'Create a post'}
-            description="Keep the composer narrow and operational. Add the caption, choose a target page, and decide whether this draft should enter the schedule immediately."
           />
 
           <form
             className="space-y-4"
             onSubmit={form.handleSubmit(async values => {
+              const mediaUpload =
+                mediaSource === 'upload' && selectedMediaFile
+                  ? await fileToUploadPayload(selectedMediaFile)
+                  : undefined;
               const saved = await savePostMutation.mutateAsync({
                 title: values.title || undefined,
                 content: values.content,
-                mediaUrl: values.mediaUrl || undefined,
+                mediaUrl:
+                  mediaSource === 'url'
+                    ? values.mediaUrl || undefined
+                    : undefined,
+                mediaUpload,
                 facebookAccountId: values.facebookAccountId || undefined
               });
 
@@ -260,6 +308,9 @@ export function PostsView() {
               setEditingPostId(null);
               form.reset(emptyPostForm);
               setNewScheduleAt('');
+              setMediaSource('url');
+              setSelectedMediaFile(null);
+              setMediaInputError(null);
             })}
           >
             <Card
@@ -305,15 +356,89 @@ export function PostsView() {
                 <FieldError message={form.formState.errors.content?.message} />
               </label>
 
-              <label className="block text-sm">
-                <Label>Media URL</Label>
-                <InputControl
-                  placeholder="https://..."
-                  invalid={Boolean(form.formState.errors.mediaUrl)}
-                  {...form.register('mediaUrl')}
-                />
-                <FieldError message={form.formState.errors.mediaUrl?.message} />
-              </label>
+              <div className="block text-sm">
+                <Label>Media source</Label>
+                <div className="mt-2">
+                  <SegmentedControl
+                    legend="Media source"
+                    options={[
+                      { label: 'Media URL', value: 'url' },
+                      { label: 'Upload file', value: 'upload' }
+                    ]}
+                    value={mediaSource}
+                    onChange={value => {
+                      setMediaSource(value as MediaSource);
+                      setMediaInputError(null);
+
+                      if (value === 'url') {
+                        setSelectedMediaFile(null);
+                      } else {
+                        form.setValue('mediaUrl', '');
+                      }
+                    }}
+                    containerClassName="flex flex-wrap gap-2 rounded-[1rem]"
+                    itemClassName="inline-flex rounded-lg border px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--accent)]"
+                    activeClassName="border-primary/30 bg-primary/10 text-primary shadow-sm"
+                    inactiveClassName="border-[var(--line)] bg-[var(--panel-strong)] text-[var(--foreground)] hover:border-[var(--line-strong)]"
+                  />
+                </div>
+              </div>
+
+              {mediaSource === 'url' ? (
+                <label className="block text-sm">
+                  <Label>Media URL</Label>
+                  <InputControl
+                    placeholder="https://..."
+                    invalid={Boolean(form.formState.errors.mediaUrl)}
+                    {...form.register('mediaUrl')}
+                  />
+                  <FieldError
+                    message={form.formState.errors.mediaUrl?.message}
+                  />
+                </label>
+              ) : (
+                <label className="block text-sm">
+                  <Label>Upload image or video</Label>
+                  <InputControl
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                      const file = event.target.files?.[0] ?? null;
+
+                      if (!file) {
+                        setSelectedMediaFile(null);
+                        setMediaInputError(null);
+                        return;
+                      }
+
+                      if (
+                        !file.type.startsWith('image/') &&
+                        !file.type.startsWith('video/')
+                      ) {
+                        setSelectedMediaFile(null);
+                        setMediaInputError(
+                          'Only image and video files are supported.'
+                        );
+                        return;
+                      }
+
+                      if (file.size > MAX_UPLOAD_BYTES) {
+                        setSelectedMediaFile(null);
+                        setMediaInputError('Uploads must stay under 25MB.');
+                        return;
+                      }
+
+                      setSelectedMediaFile(file);
+                      setMediaInputError(null);
+                    }}
+                  />
+                  <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+                    Upload directly from this device or switch back to a public
+                    media URL.
+                  </p>
+                  <FieldError message={mediaInputError ?? undefined} />
+                </label>
+              )}
 
               <label className="block text-sm">
                 <Label>Initial schedule time</Label>
@@ -349,6 +474,9 @@ export function PostsView() {
                     setEditingPostId(null);
                     form.reset(emptyPostForm);
                     setNewScheduleAt('');
+                    setMediaSource('url');
+                    setSelectedMediaFile(null);
+                    setMediaInputError(null);
                   }}
                 >
                   Cancel edit
@@ -373,31 +501,20 @@ export function PostsView() {
         </Card>
 
         <Card className="space-y-5 p-5">
-          <SectionHeading
-            eyebrow="Operator View"
-            title="Live preview and queue health"
-            description="Keep the draft preview, queue usage, and execution signals visible while you compose."
-          />
+          <SectionHeading eyebrow="Preview" title="Post preview" />
 
           <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
             <Card
               className={`${subtlePanelClassName} overflow-hidden shadow-none`}
             >
-              {watchedValues.mediaUrl ? (
+              {previewMediaUrl ? (
                 <div className="relative h-56 w-full border-b border-[var(--line)] bg-[var(--panel)]">
-                  {previewMediaUrl ? (
-                    <img
-                      src={previewMediaUrl}
-                      alt="Post preview"
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--muted-foreground)]">
-                      Preview is available for HTTPS media URLs only.
-                    </div>
-                  )}
+                  <PostMediaPreview
+                    mediaUrl={previewMediaUrl}
+                    alt="Post preview"
+                    emptyLabel="Media preview"
+                    videoClassName="bg-black"
+                  />
                 </div>
               ) : (
                 <div className="flex h-56 items-center justify-center border-b border-[var(--line)] bg-[var(--panel-strong)] text-sm text-[var(--muted-foreground)]">
@@ -409,7 +526,10 @@ export function PostsView() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-lg font-semibold">
-                      {watchedValues.title || 'Untitled post'}
+                      {getPostDisplayTitle(
+                        watchedValues.title,
+                        watchedValues.content
+                      )}
                     </p>
                     <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                       {selectedAccount?.pageName ?? 'Default connected page'}
@@ -424,6 +544,11 @@ export function PostsView() {
                   {watchedValues.content ||
                     'Start writing to preview how the post will read inside the queue.'}
                 </p>
+                {previewMediaKind ? (
+                  <p className="text-xs uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+                    {previewMediaKind} attached
+                  </p>
+                ) : null}
               </div>
             </Card>
 
@@ -484,11 +609,7 @@ export function PostsView() {
 
       <Card className="space-y-5 p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <SectionHeading
-            eyebrow="Queue"
-            title="Active content inventory"
-            description="Filter by workflow state, scan each item quickly, and act on scheduling or publishing from the same operational list."
-          />
+          <SectionHeading eyebrow="Queue" title="Active content inventory" />
 
           <SegmentedControl
             legend="Post status filter"
@@ -500,7 +621,7 @@ export function PostsView() {
             onChange={setStatusFilter}
             containerClassName="flex flex-wrap gap-2 rounded-[1rem]"
             itemClassName="inline-flex rounded-lg border px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--accent)]"
-            activeClassName="border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--accent-soft)] text-[var(--accent-deep)]"
+            activeClassName="border-primary/30 bg-primary/10 text-primary shadow-sm"
             inactiveClassName="border-[var(--line)] bg-[var(--panel-strong)] text-[var(--foreground)] hover:border-[var(--line-strong)]"
           />
         </div>
@@ -529,48 +650,44 @@ export function PostsView() {
           {filteredPosts.map(post => {
             const scheduleValue =
               scheduleValues[post.id] ?? toDateTimeLocalValue(post.scheduledAt);
+            const displayTitle = getPostDisplayTitle(post.title, post.content);
 
             return (
               <Card
                 key={post.id}
-                className={`${subtlePanelClassName} grid gap-4 p-4 shadow-none xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]`}
+                className={`${subtlePanelClassName} grid gap-5 p-4 shadow-none xl:grid-cols-[minmax(0,1.2fr)_360px]`}
               >
                 <div className="space-y-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <p className="text-lg font-semibold">
-                          {post.title ?? 'Untitled post'}
-                        </p>
-                        <StatusBadge tone={getStatusTone(post.status)}>
-                          {formatPostStatus(post.status)}
-                        </StatusBadge>
-                      </div>
-                      <p className="max-w-3xl text-sm leading-6 text-[var(--muted-foreground)]">
-                        {truncateCopy(post.content)}
-                      </p>
-                    </div>
-
-                    {post.mediaUrl ? (
-                      <div className="relative hidden h-24 w-24 overflow-hidden rounded-lg border border-[var(--line)] xl:block">
-                        {getSafePreviewUrl(post.mediaUrl) ? (
-                          <img
-                            src={getSafePreviewUrl(post.mediaUrl) as string}
-                            alt={post.title ?? 'Post media'}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
+                  <div className="flex min-w-0 items-start gap-4">
+                    <div className="flex min-w-0 flex-1 items-start gap-4">
+                      {post.mediaUrl ? (
+                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--panel)]">
+                          <PostMediaPreview
+                            mediaUrl={post.mediaUrl}
+                            alt={displayTitle}
+                            emptyLabel="Media"
+                            videoClassName="bg-black"
                           />
-                        ) : (
-                          <div className="flex h-full items-center justify-center px-2 text-center text-[11px] text-[var(--muted-foreground)]">
-                            No preview
-                          </div>
-                        )}
+                        </div>
+                      ) : null}
+
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="min-w-0 truncate text-lg font-semibold">
+                            {displayTitle}
+                          </p>
+                          <StatusBadge tone={getStatusTone(post.status)}>
+                            {formatPostStatus(post.status)}
+                          </StatusBadge>
+                        </div>
+                        <p className="max-w-3xl text-sm leading-6 text-[var(--muted-foreground)]">
+                          {getPostExcerpt(post.content, 180)}
+                        </p>
                       </div>
-                    ) : null}
+                    </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4">
                     <Card
                       className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
                     >
@@ -589,7 +706,14 @@ export function PostsView() {
                     <Card
                       className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
                     >
-                      FB ID {post.facebookPostId ?? 'Pending'}
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                          FB ID
+                        </p>
+                        <p className="break-all">
+                          {post.facebookPostId ?? 'Pending'}
+                        </p>
+                      </div>
                     </Card>
                   </div>
 
@@ -602,43 +726,51 @@ export function PostsView() {
                   ) : null}
                 </div>
 
-                <div className="space-y-3 border-t border-[var(--line)] pt-4 xl:border-t-0 xl:border-l xl:pl-4 xl:pt-0">
-                  <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
-                    <InputControl
-                      className="mt-0"
-                      type="datetime-local"
-                      aria-label={`Schedule time for ${post.title ?? 'post'}`}
-                      value={scheduleValue}
-                      onChange={event => {
-                        setScheduleValues(current => ({
-                          ...current,
-                          [post.id]: event.target.value
-                        }));
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        if (!scheduleValue) {
-                          return;
-                        }
+                <div className="space-y-3 border-t border-[var(--line)] pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                      Schedule
+                    </Label>
+                    <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                      <InputControl
+                        className="mt-0"
+                        type="datetime-local"
+                        aria-label={`Schedule time for ${displayTitle}`}
+                        value={scheduleValue}
+                        onChange={event => {
+                          setScheduleValues(current => ({
+                            ...current,
+                            [post.id]: event.target.value
+                          }));
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          if (!scheduleValue) {
+                            return;
+                          }
 
-                        void schedulePostMutation.mutateAsync({
-                          postId: post.id,
-                          scheduledAt: scheduleValue
-                        });
-                      }}
-                      disabled={schedulePostMutation.isPending}
-                    >
-                      Reschedule
-                    </Button>
+                          void schedulePostMutation.mutateAsync({
+                            postId: post.id,
+                            scheduledAt: scheduleValue
+                          });
+                        }}
+                        disabled={
+                          schedulePostMutation.isPending ||
+                          post.status === 'published'
+                        }
+                      >
+                        Save time
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid gap-2 sm:grid-cols-2">
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="outline"
                       onClick={() => {
                         setEditingPostId(post.id);
                       }}
@@ -658,12 +790,12 @@ export function PostsView() {
                     >
                       Publish
                     </Button>
-                    <Button asChild variant="secondary">
-                      <Link href="/dashboard/scheduler">Queue view</Link>
+                    <Button asChild variant="outline">
+                      <Link href="/dashboard/scheduler">Scheduler</Link>
                     </Button>
                     <Button
                       type="button"
-                      variant="secondary"
+                      variant="destructive"
                       onClick={() => {
                         void deletePostMutation.mutateAsync(post.id);
                       }}
@@ -675,6 +807,12 @@ export function PostsView() {
                       Delete
                     </Button>
                   </div>
+
+                  {post.status === 'published' ? (
+                    <p className="text-xs text-muted-foreground">
+                      Published posts are locked for editing and rescheduling.
+                    </p>
+                  ) : null}
                 </div>
               </Card>
             );

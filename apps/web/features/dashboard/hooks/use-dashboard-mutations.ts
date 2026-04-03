@@ -7,7 +7,11 @@ import { useToast } from '@/components/providers/toast-provider';
 import { useApiClient } from '@/hooks/use-api-client';
 import { getErrorMessage } from '@/lib/api';
 import { dashboardQueryKeys } from '@/features/dashboard/lib/query-keys';
-import type { FacebookAccount, PostRecord } from '@/features/dashboard/types';
+import type {
+  FacebookAccount,
+  MediaUploadPayload,
+  PostRecord
+} from '@/features/dashboard/types';
 
 async function invalidateDashboardQueries(queryClient: QueryClient) {
   await Promise.all([
@@ -94,6 +98,7 @@ export function useSavePostMutation(postId?: string | null) {
       title?: string;
       content: string;
       mediaUrl?: string;
+      mediaUpload?: MediaUploadPayload;
       facebookAccountId?: string;
     }) => {
       if (postId) {
@@ -199,6 +204,33 @@ export function useSchedulePostMutation() {
       toast.error(
         'Unable to schedule post',
         getErrorMessage(error, 'The schedule could not be updated.')
+      );
+    }
+  });
+}
+
+export function useReplyToCommentsMutation() {
+  const queryClient = useQueryClient();
+  const { request } = useApiClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: async (input: { postId: string; message: string }) =>
+      await request<{ postId: string; commentId: string }>('/comments/reply', {
+        method: 'POST',
+        body: input
+      }),
+    onSuccess: async () => {
+      await invalidateDashboardQueries(queryClient);
+      toast.success(
+        'Reply sent',
+        'Your response was posted to the selected Facebook thread.'
+      );
+    },
+    onError: error => {
+      toast.error(
+        'Unable to send reply',
+        getErrorMessage(error, 'The reply could not be posted to Facebook.')
       );
     }
   });

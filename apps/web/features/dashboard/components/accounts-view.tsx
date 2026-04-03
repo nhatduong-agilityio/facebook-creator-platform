@@ -82,8 +82,7 @@ export function AccountsView() {
     <>
       <PageHeader
         eyebrow="Accounts"
-        title="Manage Facebook page connectivity"
-        description="Keep publishing destinations healthy, reconnect quickly when tokens drift toward expiry, and keep a manual recovery path available for support cases."
+        title="Facebook pages"
         tags={
           <>
             <GlassTag
@@ -95,7 +94,6 @@ export function AccountsView() {
               {(accountsQuery.data?.length ?? 0) === 1 ? '' : 's'}
             </GlassTag>
             <GlassTag tone="neutral">OAuth</GlassTag>
-            <GlassTag tone="neutral">Token health</GlassTag>
           </>
         }
         actions={
@@ -144,11 +142,7 @@ export function AccountsView() {
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="space-y-5 p-5">
-          <SectionHeading
-            eyebrow="Flow"
-            title="Connection process"
-            description="This keeps the page-linking flow obvious for non-technical users and reduces support friction when a page is connected for the first time."
-          />
+          <SectionHeading eyebrow="Flow" title="Connection steps" />
 
           <div className="space-y-3">
             {[
@@ -166,22 +160,10 @@ export function AccountsView() {
               </Card>
             ))}
           </div>
-
-          <Card className={`${tilePanelClassName} p-4 shadow-none`}>
-            <p className="font-semibold">Operator note</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-              Publishing failures are usually easier to prevent from here than
-              to clean up later from the queue.
-            </p>
-          </Card>
         </Card>
 
         <Card className="space-y-5 p-5">
-          <SectionHeading
-            eyebrow="Pages"
-            title="Connected destinations"
-            description="Each page row shows token state, connection timing, and enough context to decide whether action is needed."
-          />
+          <SectionHeading eyebrow="Pages" title="Connected pages" />
 
           <div className="space-y-3">
             {accounts.map(account => {
@@ -234,11 +216,7 @@ export function AccountsView() {
       </section>
 
       <Card className="space-y-5 p-5">
-        <SectionHeading
-          eyebrow="Manual callback"
-          title="Recovery mode"
-          description="Only use this when the guided return flow cannot complete and support asks for the raw Facebook authorization code."
-        />
+        <SectionHeading eyebrow="Manual callback" title="Recovery mode" />
 
         <form
           className="space-y-4"

@@ -3,7 +3,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const cardBaseClassName =
-  'rounded-[1.1rem] border border-[var(--line)] bg-[var(--panel)] text-[var(--foreground)] shadow-[var(--shadow-soft)]';
+  'rounded-xl border border-border bg-card text-card-foreground shadow-sm';
 
 export function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
@@ -35,10 +35,7 @@ export function CardTitle({
   return (
     <div
       data-slot="card-title"
-      className={cn(
-        'text-[1.35rem] font-semibold tracking-[-0.03em] text-[var(--foreground)]',
-        className
-      )}
+      className={cn('text-lg font-semibold tracking-tight', className)}
       {...props}
     />
   );
@@ -51,10 +48,7 @@ export function CardDescription({
   return (
     <p
       data-slot="card-description"
-      className={cn(
-        'text-sm leading-6 text-[var(--muted-foreground)]',
-        className
-      )}
+      className={cn('text-sm text-muted-foreground', className)}
       {...props}
     />
   );

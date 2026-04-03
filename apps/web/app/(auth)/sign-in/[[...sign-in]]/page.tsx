@@ -17,8 +17,8 @@ export default async function SignInPage() {
   return (
     <AuthShell
       eyebrow="Sign In"
-      title="Sign in to your workspace"
-      description="Use email and password, Google, or Facebook to continue."
+      title="Sign in"
+      description="Use email, Google, or Facebook."
       alternateLabel="Create Account"
       alternateHref="/sign-up"
       alternateText="Need a new account?"
@@ -43,7 +43,7 @@ export default async function SignInPage() {
           />
         </div>
       ) : (
-        <div className="max-w-md rounded-[20px] border border-[var(--line)] bg-[var(--panel-muted)] p-6 text-sm leading-7 text-[var(--muted-foreground)]">
+        <div className="max-w-md rounded-xl border border-border bg-muted/40 p-6 text-sm leading-7 text-muted-foreground">
           Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` to enable sign in.
         </div>
       )}

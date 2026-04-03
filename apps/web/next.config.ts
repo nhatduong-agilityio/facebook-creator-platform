@@ -14,7 +14,11 @@ function getOrigin(value?: string) {
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const apiOrigin = getOrigin(process.env.NEXT_PUBLIC_API_URL);
-const clerkSources = ['https://*.clerk.com', 'https://*.clerk.accounts.dev'];
+const clerkSources = [
+  'https://challenges.cloudflare.com',
+  'https://*.clerk.com',
+  'https://*.clerk.accounts.dev'
+];
 
 const connectSources = [
   "'self'",

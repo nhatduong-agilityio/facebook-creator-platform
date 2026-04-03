@@ -15,18 +15,10 @@ export function DashboardSetupState() {
       className="shell-grid flex min-h-screen items-center justify-center px-5 py-8"
     >
       <div className="w-full max-w-4xl space-y-4">
-        <PageHeader
-          eyebrow="Authentication"
-          title="Set up sign in to open the dashboard"
-          description="Add the Clerk public key to enable protected product routes."
-        />
+        <PageHeader eyebrow="Authentication" title="Set up sign in" />
 
         <Card className="p-5">
-          <SectionHeading
-            eyebrow="Environment"
-            title="Required values"
-            description="Use these values in the web app environment file."
-          />
+          <SectionHeading eyebrow="Environment" title="Required values" />
 
           <div className="mt-5 rounded-[24px] border border-[var(--line)] bg-[var(--panel-muted)] p-5 font-mono text-sm text-[var(--muted-foreground)]">
             <p>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx</p>

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AreaTrendChart } from '@/components/ui/dashboard-charts';
+import { PostMediaPreview } from '@/components/ui/post-media-preview';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
   ErrorCallout,
@@ -31,6 +32,8 @@ import {
 } from '@/features/dashboard/lib/derivations';
 import {
   formatDate,
+  getPostDisplayTitle,
+  getPostExcerpt,
   formatNumber,
   getStatusTone
 } from '@/features/dashboard/lib/format';
@@ -71,8 +74,7 @@ export function OverviewView() {
     <>
       <PageHeader
         eyebrow="Overview"
-        title="Workspace overview"
-        description="Queue health, performance, and the next actions for today."
+        title="Overview"
         tags={
           <>
             <GlassTag tone="accent">
@@ -152,11 +154,7 @@ export function OverviewView() {
       <section className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
         <Card className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <SectionHeading
-              eyebrow="Performance"
-              title="Engagement trend"
-              description="Track the engagement curve for the selected window and spot weekly movement fast."
-            />
+            <SectionHeading eyebrow="Performance" title="Engagement trend" />
 
             <SegmentedControl
               legend="Engagement range"
@@ -184,11 +182,7 @@ export function OverviewView() {
         </Card>
 
         <Card className="p-5">
-          <SectionHeading
-            eyebrow="AI Summary"
-            title="Recommended next moves"
-            description="Fast operational suggestions based on connected pages, posting cadence, and current plan usage."
-          />
+          <SectionHeading eyebrow="Highlights" title="What needs attention" />
 
           <div className="mt-6 space-y-3">
             {insights.map(item => (
@@ -217,11 +211,7 @@ export function OverviewView() {
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <Card className="p-5">
-          <SectionHeading
-            eyebrow="Schedule Queue"
-            title="Upcoming posts"
-            description="The next scheduled items in the queue with publish timing visible immediately."
-          />
+          <SectionHeading eyebrow="Schedule" title="Upcoming posts" />
 
           <div className="mt-6 space-y-3">
             {scheduledPosts.map(post => (
@@ -229,15 +219,20 @@ export function OverviewView() {
                 key={post.id}
                 className={`${subtlePanelClassName} p-4 shadow-none`}
               >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold">
-                    {post.title ?? 'Untitled post'}
-                  </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold">
+                      {getPostDisplayTitle(post.title, post.content)}
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                      {getPostExcerpt(post.content, 84)}
+                    </p>
+                  </div>
                   <StatusBadge tone={getStatusTone(post.status)}>
                     {post.status}
                   </StatusBadge>
                 </div>
-                <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                <p className="mt-3 text-sm text-[var(--muted-foreground)]">
                   {formatDate(post.scheduledAt)}
                 </p>
               </Card>
@@ -253,11 +248,7 @@ export function OverviewView() {
 
         <Card className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <SectionHeading
-              eyebrow="Recent Content"
-              title="Latest post activity"
-              description="A denser operational list for the latest content entering or leaving the queue."
-            />
+            <SectionHeading eyebrow="Recent" title="Latest posts" />
             <Button asChild variant="secondary">
               <Link href="/dashboard/posts">View all posts</Link>
             </Button>
@@ -269,13 +260,25 @@ export function OverviewView() {
                 key={post.id}
                 className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">
-                    {post.title ?? 'Untitled post'}
-                  </p>
-                  <p className="mt-1 truncate text-sm text-[var(--muted-foreground)]">
-                    {post.content}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  {post.mediaUrl ? (
+                    <div className="relative mt-0.5 h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel-muted)]">
+                      <PostMediaPreview
+                        mediaUrl={post.mediaUrl}
+                        alt={getPostDisplayTitle(post.title, post.content)}
+                        emptyLabel="Media"
+                        videoClassName="bg-black"
+                      />
+                    </div>
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">
+                      {getPostDisplayTitle(post.title, post.content)}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-sm text-[var(--muted-foreground)]">
+                      {getPostExcerpt(post.content, 108)}
+                    </p>
+                  </div>
                 </div>
                 <Card
                   className={`${tilePanelClassName} px-3 py-2 text-sm shadow-none`}

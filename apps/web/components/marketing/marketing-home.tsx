@@ -1,27 +1,23 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlassTag } from '@/components/ui/dashboard-primitives';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-
-const primaryLinkClassName =
-  'inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[color:color-mix(in_srgb,var(--accent)_88%,white)]';
-const secondaryLinkClassName =
-  'inline-flex items-center justify-center rounded-lg border border-[var(--line-strong)] bg-[var(--panel)] px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:bg-[var(--panel-contrast)]';
 
 const featureCards = [
   {
     title: 'Content',
-    detail: 'Create, review, and publish posts from one structured workflow.'
+    detail: 'Create and publish posts.'
   },
   {
     title: 'Schedule',
-    detail: 'Plan the queue around timing, capacity, and page availability.'
+    detail: 'Manage the calendar.'
   },
   {
     title: 'Measure',
-    detail:
-      'Track reach and engagement without opening separate reporting tools.'
+    detail: 'Review results.'
   }
 ];
 
@@ -49,33 +45,28 @@ export function MarketingHome({
   clerkConfigured: boolean;
 }) {
   return (
-    <main
-      id="main-content"
-      className="shell-grid min-h-screen text-[var(--foreground)]"
-    >
+    <main id="main-content" className="shell-grid min-h-screen text-foreground">
       <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
-        <header className="flex items-center justify-between gap-4 border-b border-[var(--line)] pb-5">
+        <header className="flex items-center justify-between gap-4 border-b border-border pb-5">
           <div>
-            <p className="eyebrow text-[11px] text-[var(--accent-secondary)]">
+            <p className="eyebrow text-[11px] text-primary">
               Facebook Creator Platform
             </p>
-            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-              Scheduling, analytics, comments, billing.
+            <p className="mt-2 text-sm text-muted-foreground">
+              Posts, analytics, billing.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <ThemeToggle />
-            <Link href={'/sign-in' as Route} className={secondaryLinkClassName}>
-              Sign in
-            </Link>
-            <Link
-              href="/dashboard"
-              prefetch={false}
-              className={primaryLinkClassName}
-            >
-              Open dashboard
-            </Link>
+            <Button asChild variant="outline">
+              <Link href={'/sign-in' as Route}>Sign in</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/dashboard" prefetch={false}>
+                Open dashboard
+              </Link>
+            </Button>
           </div>
         </header>
 
@@ -89,55 +80,46 @@ export function MarketingHome({
             </div>
 
             <div className="max-w-4xl space-y-5">
-              <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.07em] sm:text-5xl lg:text-6xl">
-                Operate Facebook content from one production-ready console.
+              <h1 className="max-w-4xl text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+                A simpler operating system for Facebook publishing.
               </h1>
-              <p className="max-w-3xl text-base leading-8 text-[var(--muted-foreground)]">
-                Connect pages, create posts, schedule delivery, track
-                performance, and manage billing in a workflow built for
-                creators, marketers, and small teams.
+              <p className="max-w-3xl text-base leading-8 text-muted-foreground">
+                Connect pages, create posts, schedule delivery, and track
+                results.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Link
-                href="/dashboard"
-                prefetch={false}
-                className={primaryLinkClassName}
-              >
-                Open dashboard
-              </Link>
-              <Link
-                href={'/sign-up' as Route}
-                className={secondaryLinkClassName}
-              >
-                Create account
-              </Link>
+              <Button asChild size="lg">
+                <Link href="/dashboard" prefetch={false}>
+                  Open dashboard
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href={'/sign-up' as Route}>Create account</Link>
+              </Button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               {featureCards.map(card => (
-                <div
-                  key={card.title}
-                  className="surface-panel rounded-[1rem] p-5"
-                >
-                  <p className="eyebrow text-[11px] text-[var(--accent-secondary)]">
-                    {card.title}
-                  </p>
-                  <p className="mt-3 text-lg font-semibold">{card.detail}</p>
-                </div>
+                <Card key={card.title}>
+                  <CardHeader className="pb-2">
+                    <p className="eyebrow text-[11px] text-primary">
+                      {card.title}
+                    </p>
+                    <CardTitle className="text-xl">{card.detail}</CardTitle>
+                  </CardHeader>
+                </Card>
               ))}
             </div>
           </div>
 
-          <aside className="panel-strong rounded-[1.35rem] p-6 sm:p-8">
-            <div className="flex items-center justify-between gap-4 border-b border-[var(--line)] pb-5">
+          <aside className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
+            <div className="flex items-center justify-between gap-4 border-b border-border pb-5">
               <div>
-                <p className="eyebrow text-[11px] text-[var(--accent-secondary)]">
-                  Live preview
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
-                  Creator workspace
+                <p className="eyebrow text-[11px] text-primary">Preview</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+                  Dashboard
                 </h2>
               </div>
               <GlassTag tone={clerkConfigured ? 'success' : 'warning'}>
@@ -145,29 +127,29 @@ export function MarketingHome({
               </GlassTag>
             </div>
 
-            <div className="mt-6 rounded-[1.1rem] border border-[var(--line)] bg-[var(--panel)] p-5">
+            <div className="mt-6 rounded-2xl border border-border bg-background p-5">
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-[0.95rem] border border-[var(--line)] bg-[var(--panel-muted)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+                <div className="rounded-xl border border-border bg-muted/40 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     Pages
                   </p>
-                  <p className="mt-3 text-3xl font-semibold tracking-[-0.06em]">
+                  <p className="mt-3 text-3xl font-semibold tracking-tight">
                     12
                   </p>
                 </div>
-                <div className="rounded-[0.95rem] border border-[var(--line)] bg-[var(--panel-muted)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+                <div className="rounded-xl border border-border bg-muted/40 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     Scheduled
                   </p>
-                  <p className="mt-3 text-3xl font-semibold tracking-[-0.06em]">
+                  <p className="mt-3 text-3xl font-semibold tracking-tight">
                     24
                   </p>
                 </div>
-                <div className="rounded-[0.95rem] border border-[var(--line)] bg-[var(--panel-muted)] p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+                <div className="rounded-xl border border-border bg-muted/40 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     Reach
                   </p>
-                  <p className="mt-3 text-3xl font-semibold tracking-[-0.06em]">
+                  <p className="mt-3 text-3xl font-semibold tracking-tight">
                     128K
                   </p>
                 </div>
@@ -177,7 +159,7 @@ export function MarketingHome({
                 {previewRows.map(row => (
                   <div
                     key={row.title}
-                    className="rounded-[1rem] border border-[var(--line)] bg-[var(--panel-muted)] p-4"
+                    className="rounded-xl border border-border bg-muted/40 p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -186,11 +168,11 @@ export function MarketingHome({
                           {row.value}
                         </p>
                       </div>
-                      <span className="rounded-full bg-[var(--panel-contrast)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-foreground)]">
-                        Insight
+                      <span className="rounded-full bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                        Status
                       </span>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       {row.detail}
                     </p>
                   </div>

@@ -17,8 +17,8 @@ export default async function SignUpPage() {
   return (
     <AuthShell
       eyebrow="Sign Up"
-      title="Create your account"
-      description="Sign up with email and password, Google, or Facebook."
+      title="Create account"
+      description="Use email, Google, or Facebook."
       alternateLabel="Back to Sign In"
       alternateHref="/sign-in"
       alternateText="Already have an account?"
@@ -43,7 +43,7 @@ export default async function SignUpPage() {
           />
         </div>
       ) : (
-        <div className="max-w-md rounded-[20px] border border-[var(--line)] bg-[var(--panel-muted)] p-6 text-sm leading-7 text-[var(--muted-foreground)]">
+        <div className="max-w-md rounded-xl border border-border bg-muted/40 p-6 text-sm leading-7 text-muted-foreground">
           Add `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` to enable sign up.
         </div>
       )}

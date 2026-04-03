@@ -9,8 +9,7 @@ export const metadata: Metadata = {
     default: 'Facebook Creator Platform',
     template: '%s | Facebook Creator Platform'
   },
-  description:
-    'Facebook content management, scheduling, analytics, and billing in a dashboard workspace.',
+  description: 'Facebook posts, analytics, and billing.',
   applicationName: 'Facebook Creator Platform'
 };
 
@@ -27,6 +26,7 @@ const themeScript = `
         ? storedTheme
         : systemTheme;
 
+    root.classList.toggle('dark', theme === 'dark');
     root.dataset.theme = theme;
     root.style.colorScheme = theme;
   })();
