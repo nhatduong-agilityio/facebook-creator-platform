@@ -32,29 +32,25 @@ export class BillingController extends BaseController {
    * Register all routes for this controller on the given Fastify instance.
    *
    * This implementation registers the following endpoints:
-   *   - GET /checkout: returns a Stripe Checkout session for the authenticated user
-   *   - GET /subscriptions: returns a list of active subscriptions for the authenticated user
+   *   - POST /checkout: returns a Stripe Checkout session for the authenticated user
+   *   - GET /subscription: returns the current subscription summary for the authenticated user
    *   - POST /webhook: handles Stripe webhooks (e.g. subscription created/updated events)
    */
   override routes(fastify: FastifyInstance): void {
     const protectedHandlers = [clerkAuthMiddleware, this.authContextMiddleware];
 
-    fastify.get(
+    fastify.post(
       '/checkout',
       { preHandler: protectedHandlers },
       this.checkout.bind(this)
     );
 
     fastify.get(
-      '/subscriptions',
+      '/subscription',
       { preHandler: [...protectedHandlers, this.planGuard] },
-      this.subscriptions.bind(this)
+      this.subscription.bind(this)
     );
-    fastify.post(
-      '/webhook',
-      { preHandler: protectedHandlers },
-      this.webhook.bind(this)
-    );
+    fastify.post('/webhook', this.webhook.bind(this));
   }
 
   /**
@@ -82,13 +78,13 @@ export class BillingController extends BaseController {
   }
 
   /**
-   * GET /subscriptions
+   * GET /subscription
    *
    * Retrieves the subscription summary for the authenticated user.
    * The summary includes the billing plan code, name, post limit, scheduled limit, status, and current period end date.
    * @returns {Promise<void>} - a promise that resolves to a JSON response with the subscription summary
    */
-  private async subscriptions(
+  private async subscription(
     req: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {

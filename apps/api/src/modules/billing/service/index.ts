@@ -27,6 +27,7 @@ import type {
   BillingPlanContext,
   BillingSubscriptionSummaryDto
 } from '../contracts';
+import type { PlanEntity } from '@/modules/plans/entity';
 
 export class BillingService extends BaseService implements BillingServicePort {
   constructor(
@@ -59,7 +60,7 @@ export class BillingService extends BaseService implements BillingServicePort {
   async getUserPlanContextForUser(
     user: UserEntity
   ): Promise<BillingPlanContext> {
-    const subscription = await this.getResolvedSubscription(user.id);
+    const subscription = await this.getResolvedSubscription(user);
     return await this.buildPlanContext(subscription);
   }
 
@@ -84,7 +85,7 @@ export class BillingService extends BaseService implements BillingServicePort {
   async getSubscriptionSummaryForUser(
     user: UserEntity
   ): Promise<BillingSubscriptionSummaryDto> {
-    const subscription = await this.getResolvedSubscription(user.id);
+    const subscription = await this.getResolvedSubscription(user);
     const plan = await this.buildPlanContext(subscription);
 
     return {
@@ -112,6 +113,12 @@ export class BillingService extends BaseService implements BillingServicePort {
 
     if (!proPriceId) {
       throw new ValidationError('Missing Stripe PRO price ID');
+    }
+
+    if (!isStripePriceIdConfigured(proPriceId)) {
+      throw new ValidationError(
+        'Stripe PRO price is not configured. Replace STRIPE_PRO_PRICE_ID with a real Stripe price ID from the Stripe dashboard.'
+      );
     }
 
     const dbUser = await this.requireUser(input.userId);
@@ -224,9 +231,10 @@ export class BillingService extends BaseService implements BillingServicePort {
       fallbackUserId
     );
     const proPlan = await this.planRepo.getProPlan();
-    const existing = await this.subscriptionRepo.findByStripeSubscriptionId(
-      subscription.id
-    );
+    const existing =
+      (await this.subscriptionRepo.findByStripeSubscriptionId(
+        subscription.id
+      )) ?? (await this.subscriptionRepo.findCurrentByUserId(user.id));
 
     await this.subscriptionRepo.saveSubscription({
       id: existing?.id,
@@ -340,11 +348,7 @@ export class BillingService extends BaseService implements BillingServicePort {
   private async buildPlanContext(
     subscription: SubscriptionEntity
   ): Promise<BillingPlanContext> {
-    const plan = await this.planRepo.findById(subscription.planId);
-
-    if (!plan) {
-      throw new NotFoundError('Plan not found for subscription');
-    }
+    const plan = await this.resolvePlanForSubscription(subscription);
 
     return {
       code: plan.code,
@@ -357,6 +361,29 @@ export class BillingService extends BaseService implements BillingServicePort {
     };
   }
 
+  private async resolvePlanForSubscription(
+    subscription: SubscriptionEntity
+  ): Promise<PlanEntity> {
+    const existingPlan = await this.planRepo.findById(subscription.planId);
+
+    if (existingPlan) {
+      return existingPlan;
+    }
+
+    const fallbackPlan = subscription.stripeSubscriptionId
+      ? await this.planRepo.getProPlan()
+      : await this.planRepo.getFreePlan();
+
+    subscription.planId = fallbackPlan.id;
+    await this.subscriptionRepo.saveSubscription({
+      ...subscription,
+      userId: subscription.userId,
+      planId: fallbackPlan.id
+    });
+
+    return fallbackPlan;
+  }
+
   /**
    * Gets the resolved subscription for a user.
    * A resolved subscription is a subscription that is either active or free.
@@ -367,22 +394,91 @@ export class BillingService extends BaseService implements BillingServicePort {
    * @returns {Promise<SubscriptionEntity>} - a promise that resolves to the resolved subscription
    */
   private async getResolvedSubscription(
-    userId: string
+    user: UserEntity
   ): Promise<SubscriptionEntity> {
     await this.planRepo.ensureDefaults();
 
-    const currentSubscription =
-      await this.subscriptionRepo.findCurrentByUserId(userId);
+    const currentSubscription = await this.subscriptionRepo.findCurrentByUserId(
+      user.id
+    );
 
-    if (!currentSubscription) {
-      return await this.ensureFreeSubscription(userId);
-    }
-
-    if (this.isActiveStatus(currentSubscription.status)) {
+    if (
+      currentSubscription &&
+      this.isActiveStatus(currentSubscription.status) &&
+      currentSubscription.stripeSubscriptionId &&
+      (await this.planRepo.findById(currentSubscription.planId))
+    ) {
       return currentSubscription;
     }
 
-    return await this.ensureFreeSubscription(userId);
+    const reconciledSubscription = await this.reconcileStripeSubscription(user);
+
+    if (
+      reconciledSubscription &&
+      this.isActiveStatus(reconciledSubscription.status)
+    ) {
+      return reconciledSubscription;
+    }
+
+    return await this.ensureFreeSubscription(user.id);
+  }
+
+  private async reconcileStripeSubscription(
+    user: UserEntity
+  ): Promise<SubscriptionEntity | null> {
+    if (!user.stripeCustomerId) {
+      return null;
+    }
+
+    try {
+      const stripeSubscriptions =
+        await this.stripeProvider.listSubscriptionsByCustomer(
+          user.stripeCustomerId
+        );
+      const currentStripeSubscription =
+        this.selectCurrentStripeSubscription(stripeSubscriptions);
+
+      if (!currentStripeSubscription) {
+        return null;
+      }
+
+      await this.syncStripeSubscription(currentStripeSubscription, user.id);
+
+      return await this.subscriptionRepo.findByStripeSubscriptionId(
+        currentStripeSubscription.id
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  private selectCurrentStripeSubscription(
+    subscriptions: StripeSubscriptionSnapshot[]
+  ): StripeSubscriptionSnapshot | null {
+    if (subscriptions.length === 0) {
+      return null;
+    }
+
+    const prioritizedStatuses: StripeSubscriptionProviderStatus[] = [
+      'active',
+      'trialing',
+      'past_due',
+      'incomplete',
+      'unpaid',
+      'canceled'
+    ];
+
+    for (const status of prioritizedStatuses) {
+      const match = subscriptions.find(
+        subscription => subscription.status === status
+      );
+
+      if (match) {
+        return match;
+      }
+    }
+
+    return subscriptions[0] ?? null;
   }
 
   /**
@@ -444,4 +540,18 @@ export class BillingService extends BaseService implements BillingServicePort {
 
     return user;
   }
+}
+
+function isStripePriceIdConfigured(value: string): boolean {
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  if (normalized === 'price_xxx') {
+    return false;
+  }
+
+  return normalized.startsWith('price_');
 }

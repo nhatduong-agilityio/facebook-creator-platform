@@ -142,6 +142,20 @@ export class StripeProvider implements StripeBillingProviderPort {
     return this.toSubscriptionSnapshot(subscription);
   }
 
+  async listSubscriptionsByCustomer(
+    customerId: string
+  ): Promise<StripeSubscriptionSnapshot[]> {
+    const subscriptions = await this.stripeClient.subscriptions.list({
+      customer: customerId,
+      status: 'all',
+      limit: 10
+    });
+
+    return subscriptions.data.map(subscription =>
+      this.toSubscriptionSnapshot(subscription)
+    );
+  }
+
   /**
    * Converts a Stripe Subscription object to a StripeSubscriptionSnapshot.
    *

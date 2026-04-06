@@ -64,6 +64,9 @@ export interface StripeBillingProviderPort {
   retrieveSubscription(
     stripeSubscriptionId: string
   ): Promise<StripeSubscriptionSnapshot>;
+  listSubscriptionsByCustomer(
+    customerId: string
+  ): Promise<StripeSubscriptionSnapshot[]>;
 }
 
 export interface BillingServicePort {
