@@ -4,6 +4,7 @@ import { buildApp } from './app';
 import { closeDb, initializeDb } from './config/database';
 import type { DataSource } from 'typeorm';
 import { PlanRepository } from './modules/plans/repository';
+import { shouldRunEmbeddedWorkers, startWorkers } from './modules/jobs/workers';
 
 /**
  * Application entry point.
@@ -15,11 +16,17 @@ async function bootstrap(): Promise<void> {
   const HOST = process.env.HOST ?? '0.0.0.0';
 
   let dataSource: DataSource | undefined;
+  let stopWorkers: (() => Promise<void>) | undefined;
 
   try {
     dataSource = await initializeDb();
     const planRepo = new PlanRepository(dataSource);
     await planRepo.ensureDefaults();
+
+    if (shouldRunEmbeddedWorkers()) {
+      stopWorkers = startWorkers(dataSource);
+      console.info('[Jobs] Embedded workers are running');
+    }
   } catch (err) {
     console.error('[DB] Failed to connect. Exiting.', err);
     process.exit(1);
@@ -41,6 +48,7 @@ async function bootstrap(): Promise<void> {
   const shutdown = async (signal: string): Promise<void> => {
     console.info(`\n[Server] ${signal} received — shutting down...`);
     await app.close();
+    await stopWorkers?.();
     await closeDb(dataSource);
     console.info('[Server] Shutdown complete');
     process.exit(0);

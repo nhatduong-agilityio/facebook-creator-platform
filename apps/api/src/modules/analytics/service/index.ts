@@ -14,6 +14,10 @@ import type {
 import type { AuditLogWriterPort } from '@/modules/audit-logs/ports';
 import type { AnalyticsOverviewDto, AnalyticsPostDto } from '../contracts';
 import type { UserEntity } from '@/modules/users/entity';
+import type { PostEntity } from '@/modules/posts/entity';
+import type { PostMetricEntity } from '../entity';
+
+const METRICS_REFRESH_WINDOW_MS = 1000 * 60 * 5;
 
 export class AnalyticsService
   extends BaseService
@@ -37,10 +41,7 @@ export class AnalyticsService
    */
   async getOverview(userId: string): Promise<AnalyticsOverviewDto> {
     const user = await this.requireUser(userId);
-    const posts = await this.postRepo.findAllByUserId(user.id);
-    const latestMetrics = await this.postMetricRepo.findLatestByPostIds(
-      posts.map(post => post.id)
-    );
+    const { posts, latestMetrics } = await this.getPostsWithFreshMetrics(user);
 
     return posts.reduce(
       (summary, post) => {
@@ -81,10 +82,7 @@ export class AnalyticsService
    */
   async getPostAnalytics(userId: string): Promise<AnalyticsPostDto[]> {
     const user = await this.requireUser(userId);
-    const posts = await this.postRepo.findAllByUserId(user.id);
-    const latestMetrics = await this.postMetricRepo.findLatestByPostIds(
-      posts.map(post => post.id)
-    );
+    const { posts, latestMetrics } = await this.getPostsWithFreshMetrics(user);
 
     return posts.map(post => {
       const metrics = latestMetrics.get(post.id);
@@ -171,6 +169,59 @@ export class AnalyticsService
     }
 
     return publishedPosts.length;
+  }
+
+  private async getPostsWithFreshMetrics(user: UserEntity): Promise<{
+    posts: PostEntity[];
+    latestMetrics: Map<string, PostMetricEntity>;
+  }> {
+    const posts = await this.postRepo.findAllByUserId(user.id);
+    let latestMetrics = await this.postMetricRepo.findLatestByPostIds(
+      posts.map(post => post.id)
+    );
+    const stalePosts = posts.filter(post =>
+      this.shouldRefreshMetrics(post, latestMetrics.get(post.id))
+    );
+
+    if (stalePosts.length === 0) {
+      return { posts, latestMetrics };
+    }
+
+    for (const post of stalePosts) {
+      try {
+        await this.refreshPostMetrics(post.id);
+      } catch (error) {
+        console.warn(
+          `[Analytics] Failed to refresh metrics for post ${post.id}`,
+          error
+        );
+      }
+    }
+
+    latestMetrics = await this.postMetricRepo.findLatestByPostIds(
+      posts.map(post => post.id)
+    );
+
+    return { posts, latestMetrics };
+  }
+
+  private shouldRefreshMetrics(
+    post: PostEntity,
+    metric?: PostMetricEntity
+  ): boolean {
+    if (
+      post.status !== POST_STATUSES[2] ||
+      !post.facebookPostId ||
+      !post.facebookAccountId
+    ) {
+      return false;
+    }
+
+    if (!metric) {
+      return true;
+    }
+
+    return Date.now() - metric.fetchedAt.getTime() >= METRICS_REFRESH_WINDOW_MS;
   }
 
   private async requireUser(clerkUserId: string): Promise<UserEntity> {
