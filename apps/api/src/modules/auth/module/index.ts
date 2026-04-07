@@ -1,6 +1,5 @@
 // Types
 import type { AuthServicePort, ClerkWebhookVerifierPort } from '../ports';
-import type { BillingServicePort } from '@/modules/billing/ports';
 
 // Controllers
 import { AuthController } from '../controller';
@@ -15,8 +14,7 @@ import { AuthController } from '../controller';
  */
 export function createAuthModule(
   authService: AuthServicePort,
-  billingService: BillingServicePort,
   clerkWebhookVerifier: ClerkWebhookVerifierPort
 ): AuthController {
-  return new AuthController(authService, billingService, clerkWebhookVerifier);
+  return new AuthController(authService, clerkWebhookVerifier);
 }

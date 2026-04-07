@@ -1,5 +1,3 @@
-import { clerkClient } from '@clerk/fastify';
-
 // Types
 import type {
   ClerkIdentityProviderPort,
@@ -9,6 +7,7 @@ import type {
 } from '../ports';
 import type { FastifyRequest } from 'fastify';
 import { verifyWebhook } from '@clerk/fastify/webhooks';
+import { createRuntimeClerkClient } from '../lib/clerk';
 
 export class ClerkProvider
   implements ClerkIdentityProviderPort, ClerkWebhookVerifierPort
@@ -27,14 +26,18 @@ export class ClerkProvider
    * @returns {Promise<ClerkUserProfile>} - a promise that resolves to a Clerk user profile
    */
   async getUserProfile(clerkUserId: string): Promise<ClerkUserProfile> {
+    const clerkClient = createRuntimeClerkClient();
     const user = await clerkClient.users.getUser(clerkUserId);
 
-    // Generate a fallback email using the clerkUserId
+    const primaryEmail =
+      user.emailAddresses.find(
+        emailAddress => emailAddress.id === user.primaryEmailAddressId
+      )?.emailAddress ?? user.emailAddresses[0]?.emailAddress;
     const emailFallback = `${user.id}@${this.fallbackEmailDomain}`;
 
     return {
       id: user.id,
-      email: user.emailAddresses[0]?.emailAddress ?? emailFallback,
+      email: primaryEmail ?? emailFallback,
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null
     };
