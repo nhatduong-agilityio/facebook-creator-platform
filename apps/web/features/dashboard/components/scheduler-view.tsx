@@ -66,15 +66,18 @@ export function SchedulerView() {
 
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const today = new Date();
-  const queuePosts = (postsQuery.data ?? []).filter(
-    post => post.status === 'draft' || post.status === 'scheduled'
+  const draftPosts = (postsQuery.data ?? []).filter(
+    post => post.status === 'draft'
+  );
+  const scheduledPosts = (postsQuery.data ?? []).filter(
+    post => post.status === 'scheduled'
   );
   const weekColumns = buildSchedulerColumns(
-    postsQuery.data ?? [],
+    scheduledPosts,
     accountsQuery.data ?? [],
     anchorDate
   );
-  const monthDays = buildSchedulerMonth(postsQuery.data ?? [], anchorDate);
+  const monthDays = buildSchedulerMonth(scheduledPosts, anchorDate);
   const statusSummary = buildPostStatusSummary(postsQuery.data ?? []);
   const scheduledCount =
     statusSummary.find(item => item.status === 'scheduled')?.value ?? 0;
@@ -104,7 +107,7 @@ export function SchedulerView() {
         tags={
           <>
             <GlassTag tone="accent">
-              {queuePosts.length} ready to place
+              {draftPosts.length} ready to place
             </GlassTag>
             <GlassTag tone="neutral">
               Timezone {timezone.replace('_', ' ')}
@@ -142,7 +145,7 @@ export function SchedulerView() {
               >
                 Prev
               </Button>
-              <span className="min-w-[84px] text-center text-sm font-medium text-[var(--foreground)]">
+              <span className="min-w-[84px] text-center text-sm font-medium text-foreground">
                 {periodLabel}
               </span>
               <Button
@@ -171,10 +174,10 @@ export function SchedulerView() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Queued"
-          value={queuePosts.length}
+          label="Draft queue"
+          value={draftPosts.length}
           accent="blue"
-          hint="Drafts and scheduled posts ready for movement."
+          hint="Drafts waiting to be placed onto the calendar."
         />
         <MetricCard
           label="Scheduled"
@@ -204,68 +207,70 @@ export function SchedulerView() {
           />
 
           {mode === 'week' ? (
-            <div className="mt-6 grid gap-3 xl:grid-cols-7">
-              {weekColumns.map(column => (
-                <div
-                  key={column.key}
-                  className={`rounded-[1rem] border p-3 ${
-                    isSameDay(column.date, today)
-                      ? 'border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--accent-soft)]'
-                      : 'border-[var(--line)] bg-[var(--panel-contrast)]'
-                  }`}
-                  onDragOver={event => {
-                    event.preventDefault();
-                  }}
-                  onDrop={event => {
-                    event.preventDefault();
+            <div className="mt-6 overflow-x-auto pb-2">
+              <div className="grid min-w-[980px] grid-cols-7 gap-3">
+                {weekColumns.map(column => (
+                  <div
+                    key={column.key}
+                    className={`rounded-[1rem] border p-3 ${
+                      isSameDay(column.date, today)
+                        ? 'border-primary/30 bg-primary/10'
+                        : 'border-[var(--line)] bg-[var(--panel-contrast)]'
+                    }`}
+                    onDragOver={event => {
+                      event.preventDefault();
+                    }}
+                    onDrop={event => {
+                      event.preventDefault();
 
-                    if (!draggedPostId) {
-                      return;
-                    }
-
-                    void scheduleToDate(draggedPostId, column.date).finally(
-                      () => {
-                        setDraggedPostId(null);
+                      if (!draggedPostId) {
+                        return;
                       }
-                    );
-                  }}
-                >
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
-                    {column.label}
-                  </p>
-                  <p className="mt-1 font-semibold">{column.dateLabel}</p>
 
-                  <div className="mt-3 space-y-2">
-                    {column.slots.map(slot => (
-                      <Card
-                        key={slot.id}
-                        className={`${subtlePanelClassName} overflow-hidden p-3 shadow-none`}
-                      >
-                        <p className="truncate text-sm font-semibold">
-                          {slot.title}
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <StatusBadge tone={getStatusTone(slot.status)}>
-                            {formatPostStatus(slot.status)}
-                          </StatusBadge>
-                          <span className="text-xs text-[var(--muted-foreground)]">
-                            {slot.timeLabel}
-                          </span>
-                        </div>
-                        <p className="mt-2 truncate text-xs text-[var(--muted-foreground)]">
-                          {slot.accountLabel}
-                        </p>
-                      </Card>
-                    ))}
+                      void scheduleToDate(draggedPostId, column.date).finally(
+                        () => {
+                          setDraggedPostId(null);
+                        }
+                      );
+                    }}
+                  >
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                      {column.label}
+                    </p>
+                    <p className="mt-1 font-semibold">{column.dateLabel}</p>
 
-                    {column.slots.length === 0 ? (
-                      <Card className="border-dashed border-[var(--line-strong)] px-3 py-5 text-center text-sm text-[var(--muted-foreground)] shadow-none">
-                        Drop here
-                      </Card>
-                    ) : null}
+                    <div className="mt-3 space-y-2">
+                      {column.slots.map(slot => (
+                        <Card
+                          key={slot.id}
+                          className={`${subtlePanelClassName} overflow-hidden p-3 shadow-none`}
+                        >
+                          <p className="line-clamp-2 text-sm font-semibold leading-5">
+                            {slot.title}
+                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <StatusBadge tone={getStatusTone(slot.status)}>
+                              {formatPostStatus(slot.status)}
+                            </StatusBadge>
+                            <span className="text-xs text-muted-foreground">
+                              {slot.timeLabel}
+                            </span>
+                          </div>
+                          <p className="mt-2 truncate text-xs text-muted-foreground">
+                            {slot.accountLabel}
+                          </p>
+                        </Card>
+                      ))}
+
+                      {column.slots.length === 0 ? (
+                        <Card className="border-dashed border-[var(--line-strong)] px-3 py-5 text-center text-sm text-muted-foreground shadow-none">
+                          Drop here
+                        </Card>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
@@ -275,7 +280,7 @@ export function SchedulerView() {
                   className={`rounded-[1rem] border p-3 ${
                     day.isCurrentMonth
                       ? isSameDay(day.date, today)
-                        ? 'border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--accent-soft)]'
+                        ? 'border-primary/30 bg-primary/10'
                         : 'border-[var(--line)] bg-[var(--panel-contrast)]'
                       : 'border-[var(--line)] bg-[var(--panel-strong)] opacity-70'
                   }`}
@@ -296,7 +301,7 @@ export function SchedulerView() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold">{day.label}</p>
-                    <span className="text-xs text-[var(--muted-foreground)]">
+                    <span className="text-xs text-muted-foreground">
                       {day.items.length}
                     </span>
                   </div>
@@ -329,7 +334,7 @@ export function SchedulerView() {
           <SectionHeading eyebrow="Queue" title="Ready to schedule" />
 
           <div className="mt-6 space-y-3">
-            {queuePosts.map(post => (
+            {draftPosts.map(post => (
               <Card
                 key={post.id}
                 draggable
@@ -343,7 +348,7 @@ export function SchedulerView() {
                     <p className="truncate font-semibold">
                       {post.title ?? 'Untitled post'}
                     </p>
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--muted-foreground)]">
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
                       {post.content}
                     </p>
                   </div>
@@ -351,7 +356,7 @@ export function SchedulerView() {
                     {formatPostStatus(post.status)}
                   </StatusBadge>
                 </div>
-                <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
+                <p className="mt-3 text-xs uppercase tracking-[0.16em] text-muted-foreground">
                   {post.scheduledAt
                     ? `Scheduled ${formatDate(post.scheduledAt)}`
                     : 'Draft'}
@@ -359,10 +364,9 @@ export function SchedulerView() {
               </Card>
             ))}
 
-            {queuePosts.length === 0 ? (
-              <Card className="border-dashed border-[var(--line-strong)] px-4 py-6 text-sm text-[var(--muted-foreground)] shadow-none">
-                No draft or scheduled posts are available for the calendar right
-                now.
+            {draftPosts.length === 0 ? (
+              <Card className="border-dashed border-[var(--line-strong)] px-4 py-6 text-sm text-muted-foreground shadow-none">
+                No draft posts are available for the calendar right now.
               </Card>
             ) : null}
           </div>
@@ -370,7 +374,7 @@ export function SchedulerView() {
           <div className="mt-6 grid gap-3">
             <Card className={`${subtlePanelClassName} p-4 shadow-none`}>
               <p className="font-semibold">Current publish time</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Drag-and-drop scheduling uses {quickTime} in{' '}
                 {timezone.replace('_', ' ')}.
               </p>

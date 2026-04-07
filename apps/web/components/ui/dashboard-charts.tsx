@@ -1,5 +1,10 @@
 import { formatNumber } from '@/features/dashboard/lib/format';
 
+const primaryColor = 'hsl(var(--primary))';
+const borderColor = 'hsl(var(--border))';
+const mutedTextColor = 'hsl(var(--muted-foreground))';
+const foregroundColor = 'hsl(var(--foreground))';
+
 type AreaPoint = {
   label: string;
   fullLabel: string;
@@ -11,6 +16,8 @@ type BarPoint = {
   label: string;
   engagement: number;
   reach: number;
+  likes: number;
+  comments: number;
 };
 
 type DonutSegment = {
@@ -49,6 +56,7 @@ export function AreaTrendChart({
   const height = 180;
   const { line, area } = buildAreaPath(points, height, width);
   const latest = points.at(-1)?.value ?? 0;
+  const hasData = points.some(point => point.value > 0);
 
   return (
     <div
@@ -59,77 +67,99 @@ export function AreaTrendChart({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold">{label}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
+          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
             Latest value {formatNumber(latest)}
           </p>
         </div>
-        <div className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-xs text-[var(--muted-foreground)]">
+        <div className="rounded-full border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-1 text-xs text-muted-foreground">
           {points.length} points
         </div>
       </div>
 
       <div className="rounded-[1rem] border border-[var(--line)] bg-[var(--panel-contrast)] p-4">
-        <svg
-          viewBox={`0 0 ${width} ${height + 8}`}
-          className="h-52 w-full"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id="area-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.34" />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-            </linearGradient>
-          </defs>
+        {hasData ? (
+          <>
+            <svg
+              viewBox={`0 0 ${width} ${height + 8}`}
+              className="h-52 w-full"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="area-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="0%"
+                    stopColor={primaryColor}
+                    stopOpacity="0.34"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={primaryColor}
+                    stopOpacity="0"
+                  />
+                </linearGradient>
+              </defs>
 
-          {[0.2, 0.4, 0.6, 0.8].map(multiplier => (
-            <line
-              key={multiplier}
-              x1="0"
-              x2={width}
-              y1={height * multiplier}
-              y2={height * multiplier}
-              stroke="var(--line)"
-              strokeDasharray="4 8"
-            />
-          ))}
+              {[0.2, 0.4, 0.6, 0.8].map(multiplier => (
+                <line
+                  key={multiplier}
+                  x1="0"
+                  x2={width}
+                  y1={height * multiplier}
+                  y2={height * multiplier}
+                  stroke={borderColor}
+                  strokeDasharray="4 8"
+                />
+              ))}
 
-          <path d={area} fill="url(#area-fill)" />
-          <path
-            d={line}
-            fill="none"
-            stroke="var(--accent)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          {points.map((point, index) => {
-            const step = width / Math.max(points.length - 1, 1);
-            const max = Math.max(...points.map(entry => entry.value), 1);
-            const x = index * step;
-            const y = height - (point.value / max) * height;
-
-            return (
-              <circle
-                key={point.label}
-                cx={x}
-                cy={y}
-                r="4"
-                fill="var(--panel-strong)"
-                stroke="var(--accent)"
-                strokeWidth="2"
+              <path d={area} fill="url(#area-fill)" />
+              <path
+                d={line}
+                fill="none"
+                stroke={primaryColor}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
-            );
-          })}
-        </svg>
 
-        <div className="mt-4 grid grid-cols-4 gap-2 text-xs text-[var(--muted-foreground)] sm:grid-cols-7">
-          {points.map(point => (
-            <div key={point.label} className="truncate">
-              {point.label}
+              {points.map((point, index) => {
+                const step = width / Math.max(points.length - 1, 1);
+                const max = Math.max(...points.map(entry => entry.value), 1);
+                const x = index * step;
+                const y = height - (point.value / max) * height;
+
+                return (
+                  <circle
+                    key={point.label}
+                    cx={x}
+                    cy={y}
+                    r="4"
+                    fill="var(--panel-strong)"
+                    stroke={primaryColor}
+                    strokeWidth="2"
+                  />
+                );
+              })}
+            </svg>
+
+            <div className="mt-4 grid grid-cols-4 gap-2 text-xs text-muted-foreground sm:grid-cols-7">
+              {points
+                .filter((_, index) => {
+                  const step =
+                    points.length > 14 ? 4 : points.length > 7 ? 2 : 1;
+                  return index % step === 0 || index === points.length - 1;
+                })
+                .map(point => (
+                  <div key={point.label} className="truncate">
+                    {point.label}
+                  </div>
+                ))}
             </div>
-          ))}
-        </div>
+          </>
+        ) : (
+          <div className="flex h-52 items-center justify-center rounded-[0.85rem] border border-dashed border-[var(--line)] bg-[var(--panel)] px-6 text-center text-sm text-muted-foreground">
+            Reach data is not available yet for the selected window.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -152,20 +182,25 @@ export function PostPerformanceBars({ bars }: { bars: BarPoint[] }) {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-semibold">{bar.label}</p>
-              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                Reach {formatNumber(bar.reach)}
+              <p className="mt-1 text-sm text-muted-foreground">
+                Likes {formatNumber(bar.likes)} • Comments{' '}
+                {formatNumber(bar.comments)}
               </p>
             </div>
-            <p className="text-sm font-semibold text-[var(--accent)]">
+            <p className="text-sm font-semibold text-primary">
               {formatNumber(bar.engagement)}
             </p>
           </div>
 
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--panel)]">
             <div
-              className="h-full rounded-full bg-[var(--accent)]"
+              className="h-full rounded-full bg-primary"
               style={{
-                width: `${Math.max((bar.engagement / max) * 100, 8)}%`
+                width: `${
+                  bar.engagement <= 0
+                    ? 0
+                    : Math.max((bar.engagement / max) * 100, 8)
+                }%`
               }}
             />
           </div>
@@ -244,7 +279,8 @@ export function DonutChart({
             x="110"
             y="104"
             textAnchor="middle"
-            className="fill-[var(--muted-foreground)] text-xs uppercase tracking-[0.14em]"
+            fill={mutedTextColor}
+            className="text-xs uppercase tracking-[0.14em]"
           >
             Mix
           </text>
@@ -252,7 +288,8 @@ export function DonutChart({
             x="110"
             y="128"
             textAnchor="middle"
-            className="fill-[var(--foreground)] text-lg font-semibold"
+            fill={foregroundColor}
+            className="text-lg font-semibold"
           >
             {centerLabel}
           </text>
@@ -273,11 +310,11 @@ export function DonutChart({
                 />
                 <span className="font-medium">{segment.label}</span>
               </div>
-              <span className="text-sm text-[var(--muted-foreground)]">
+              <span className="text-sm text-muted-foreground">
                 {formatNumber(segment.value)}
               </span>
             </div>
-            <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+            <p className="mt-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
               {segment.percentage.toFixed(0)}% of total
             </p>
           </div>

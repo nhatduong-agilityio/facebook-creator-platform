@@ -171,17 +171,17 @@ export function buildEngagementMix(overview?: AnalyticsOverview) {
     {
       label: 'Likes',
       value: likes,
-      color: 'var(--accent)'
+      color: 'hsl(var(--primary))'
     },
     {
       label: 'Comments',
       value: comments,
-      color: 'var(--info)'
+      color: 'var(--accent-secondary)'
     },
     {
       label: 'Reach',
       value: reach,
-      color: 'var(--accent-secondary)'
+      color: 'hsl(var(--chart-4))'
     }
   ].map(segment => ({
     ...segment,
@@ -455,7 +455,7 @@ export function buildUsageBreakdown(
 
   return [
     {
-      label: 'Scheduled queue',
+      label: 'Active scheduled queue',
       current: scheduled,
       limit: scheduledLimit,
       percentage:

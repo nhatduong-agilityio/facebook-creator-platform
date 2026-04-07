@@ -377,9 +377,9 @@ export function PostsView() {
                       }
                     }}
                     containerClassName="flex flex-wrap gap-2 rounded-[1rem]"
-                    itemClassName="inline-flex rounded-lg border px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--accent)]"
+                    itemClassName="inline-flex rounded-lg border px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
                     activeClassName="border-primary/30 bg-primary/10 text-primary shadow-sm"
-                    inactiveClassName="border-[var(--line)] bg-[var(--panel-strong)] text-[var(--foreground)] hover:border-[var(--line-strong)]"
+                    inactiveClassName="border-[var(--line)] bg-[var(--panel-strong)] text-foreground hover:border-[var(--line-strong)]"
                   />
                 </div>
               </div>
@@ -432,7 +432,7 @@ export function PostsView() {
                       setMediaInputError(null);
                     }}
                   />
-                  <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     Upload directly from this device or switch back to a public
                     media URL.
                   </p>
@@ -450,7 +450,7 @@ export function PostsView() {
                     setNewScheduleAt(event.target.value);
                   }}
                 />
-                <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Local scheduling uses {timezone.replace('_', ' ')}.
                 </p>
               </label>
@@ -517,7 +517,7 @@ export function PostsView() {
                   />
                 </div>
               ) : (
-                <div className="flex h-56 items-center justify-center border-b border-[var(--line)] bg-[var(--panel-strong)] text-sm text-[var(--muted-foreground)]">
+                <div className="flex h-56 items-center justify-center border-b border-[var(--line)] bg-[var(--panel-strong)] text-sm text-muted-foreground">
                   Media preview will appear here
                 </div>
               )}
@@ -531,7 +531,7 @@ export function PostsView() {
                         watchedValues.content
                       )}
                     </p>
-                    <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {selectedAccount?.pageName ?? 'Default connected page'}
                     </p>
                   </div>
@@ -545,7 +545,7 @@ export function PostsView() {
                     'Start writing to preview how the post will read inside the queue.'}
                 </p>
                 {previewMediaKind ? (
-                  <p className="text-xs uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
                     {previewMediaKind} attached
                   </p>
                 ) : null}
@@ -559,11 +559,11 @@ export function PostsView() {
                 </p>
                 <p className="mt-3 text-3xl font-semibold">
                   {scheduledCount}
-                  <span className="ml-2 text-base font-medium text-[var(--muted-foreground)]">
+                  <span className="ml-2 text-base font-medium text-muted-foreground">
                     / {queueLimit > 0 ? queueLimit : 'Unlimited'}
                   </span>
                 </p>
-                <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                <p className="mt-2 text-sm text-muted-foreground">
                   Scheduled posts against the current plan allowance.
                 </p>
               </Card>
@@ -596,7 +596,7 @@ export function PostsView() {
 
               <Card className={`${tilePanelClassName} p-4 shadow-none`}>
                 <p className="font-semibold">Operational note</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   Use the scheduler for bulk timing changes. Use this screen
                   when you need to create, edit, publish, or reschedule one item
                   quickly.
@@ -620,9 +620,9 @@ export function PostsView() {
             value={statusFilter}
             onChange={setStatusFilter}
             containerClassName="flex flex-wrap gap-2 rounded-[1rem]"
-            itemClassName="inline-flex rounded-lg border px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--accent)]"
+            itemClassName="inline-flex rounded-lg border px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
             activeClassName="border-primary/30 bg-primary/10 text-primary shadow-sm"
-            inactiveClassName="border-[var(--line)] bg-[var(--panel-strong)] text-[var(--foreground)] hover:border-[var(--line-strong)]"
+            inactiveClassName="border-[var(--line)] bg-[var(--panel-strong)] text-foreground hover:border-[var(--line-strong)]"
           />
         </div>
 
@@ -680,7 +680,7 @@ export function PostsView() {
                             {formatPostStatus(post.status)}
                           </StatusBadge>
                         </div>
-                        <p className="max-w-3xl text-sm leading-6 text-[var(--muted-foreground)]">
+                        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
                           {getPostExcerpt(post.content, 180)}
                         </p>
                       </div>

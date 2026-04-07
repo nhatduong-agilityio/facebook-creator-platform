@@ -50,6 +50,9 @@ export function AnalyticsView() {
     range,
     'reach'
   );
+  const hasReachData =
+    (overviewQuery.data?.totalReach ?? 0) > 0 ||
+    (postsQuery.data ?? []).some(post => post.metrics.reach > 0);
   const performanceBars = buildPostPerformanceBars(postsQuery.data ?? []);
   const engagementMix = buildEngagementMix(overviewQuery.data);
   const topPosts = useMemo(() => {
@@ -89,10 +92,10 @@ export function AnalyticsView() {
             onChange={nextValue => {
               setRange(nextValue === '7' ? 7 : 30);
             }}
-            containerClassName="flex rounded-lg border border-[var(--line)] bg-[var(--panel-strong)] p-1"
-            itemClassName="inline-flex rounded-md px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--accent)]"
-            activeClassName="bg-[var(--accent)] text-white"
-            inactiveClassName="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+            containerClassName="flex rounded-lg border border-border bg-muted p-1"
+            itemClassName="inline-flex rounded-md px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
+            activeClassName="bg-primary text-primary-foreground shadow-sm"
+            inactiveClassName="text-muted-foreground hover:text-foreground"
           />
         }
       />
@@ -112,9 +115,17 @@ export function AnalyticsView() {
         />
         <MetricCard
           label="Reach"
-          value={formatNumber(overviewQuery.data?.totalReach ?? 0)}
+          value={
+            hasReachData
+              ? formatNumber(overviewQuery.data?.totalReach ?? 0)
+              : 'N/A'
+          }
           accent="blue"
-          hint="Audience reached within the selected data window."
+          hint={
+            hasReachData
+              ? 'Audience reached within the selected data window.'
+              : 'Reach insights are not available yet for the tracked posts.'
+          }
         />
         <MetricCard
           label="Engagement"
@@ -203,14 +214,14 @@ export function AnalyticsView() {
                                 {post.status}
                               </StatusBadge>
                             </div>
-                            <p className="text-sm leading-6 text-[var(--muted-foreground)]">
+                            <p className="text-sm leading-6 text-muted-foreground">
                               {getPostExcerpt(contentPost?.content, 120)}
                             </p>
-                            <p className="text-sm text-[var(--muted-foreground)]">
+                            <p className="text-sm text-muted-foreground">
                               Facebook Post ID:{' '}
                               {post.facebookPostId ?? 'Not published'}
                             </p>
-                            <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+                            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
                               Last fetched {formatDate(post.metrics.fetchedAt)}
                             </p>
                           </div>
@@ -231,7 +242,9 @@ export function AnalyticsView() {
                         <Card
                           className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}
                         >
-                          Reach {formatNumber(post.metrics.reach)}
+                          {post.metrics.reach > 0
+                            ? `Reach ${formatNumber(post.metrics.reach)}`
+                            : 'Reach unavailable'}
                         </Card>
                         <Card
                           className={`${tilePanelClassName} px-4 py-3 text-sm shadow-none`}

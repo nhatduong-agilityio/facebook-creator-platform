@@ -4,15 +4,13 @@ import { FacebookConnectCallback } from '@/features/facebook/components/facebook
 
 function CallbackFallback() {
   return (
-    <main className="shell-grid flex min-h-screen items-center justify-center px-5 py-8 text-[var(--foreground)] sm:px-8">
+    <main className="shell-grid flex min-h-screen items-center justify-center px-5 py-8 text-foreground sm:px-8">
       <section className="surface-panel w-full max-w-xl rounded-[28px] p-6 sm:p-8">
         <p className="eyebrow text-xs text-[var(--accent-deep)]">
           Facebook Callback
         </p>
         <h1 className="mt-3 text-3xl font-semibold">Connect Facebook</h1>
-        <p className="mt-4 text-sm leading-6 text-[var(--muted-foreground)]">
-          Loading.
-        </p>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">Loading.</p>
       </section>
     </main>
   );
@@ -21,13 +19,13 @@ function CallbackFallback() {
 export default function FacebookConnectPage() {
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     return (
-      <main className="shell-grid flex min-h-screen items-center justify-center px-5 py-8 text-[var(--foreground)] sm:px-8">
+      <main className="shell-grid flex min-h-screen items-center justify-center px-5 py-8 text-foreground sm:px-8">
         <section className="surface-panel w-full max-w-xl rounded-[28px] p-6 sm:p-8">
           <p className="eyebrow text-xs text-[var(--accent-deep)]">
             Facebook Callback
           </p>
           <h1 className="mt-3 text-3xl font-semibold">Connect Facebook</h1>
-          <p className="mt-4 text-sm leading-6 text-[var(--muted-foreground)]">
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">
             Sign in must be configured before you can connect a Facebook page.
           </p>
         </section>

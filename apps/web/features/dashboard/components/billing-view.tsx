@@ -137,22 +137,36 @@ export function BillingView() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-semibold">{item.label}</p>
-                  <p className="text-sm text-[var(--muted-foreground)]">
+                  <p className="text-sm text-muted-foreground">
                     {item.current}
                     {item.limit > 0 ? ` / ${item.limit}` : ' / Unlimited'}
                   </p>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--panel)]">
                   <div
-                    className="h-full rounded-full bg-[var(--accent)]"
+                    className="h-full rounded-full bg-primary"
                     style={{
-                      width: `${item.limit > 0 ? Math.max(item.percentage, 6) : 100}%`
+                      width: `${
+                        item.current <= 0
+                          ? 0
+                          : item.limit > 0
+                            ? Math.max(item.percentage, 6)
+                            : 100
+                      }%`
                     }}
                   />
                 </div>
               </Card>
             ))}
           </div>
+
+          <Card
+            className={`${subtlePanelClassName} p-4 text-sm text-muted-foreground shadow-none`}
+          >
+            Scheduled queue usage only counts posts that are still waiting in
+            the calendar. Once a scheduled post is published, it no longer
+            consumes one of your active queue slots.
+          </Card>
 
           <div className="space-y-3">
             <InfoRow
@@ -184,7 +198,7 @@ export function BillingView() {
                 <h3 className="text-xl font-semibold">Free</h3>
                 <StatusBadge tone="free">Starter</StatusBadge>
               </div>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted-foreground)]">
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
                 <li>Draft, publish, and schedule with lighter queue volume.</li>
                 <li>Best for solo creators or low-frequency content plans.</li>
                 <li>Simple entry point before regular campaigns scale up.</li>
@@ -196,7 +210,7 @@ export function BillingView() {
                 <h3 className="text-xl font-semibold">Pro</h3>
                 <StatusBadge tone="pro">Scale</StatusBadge>
               </div>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted-foreground)]">
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
                 <li>More room for scheduling and campaign-level posting.</li>
                 <li>
                   Better fit for freelancers, marketers, and active brands.
@@ -228,14 +242,14 @@ export function BillingView() {
           <div className="space-y-3">
             <Card className={`${subtlePanelClassName} p-4 shadow-none`}>
               <p className="font-semibold">Billing history</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Subscription state is available now. Invoice history is not
                 available yet.
               </p>
             </Card>
             <Card className={`${subtlePanelClassName} p-4 shadow-none`}>
               <p className="font-semibold">Current cycle</p>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Renewal date: {formatDate(currentPlan?.currentPeriodEnd)}
               </p>
             </Card>

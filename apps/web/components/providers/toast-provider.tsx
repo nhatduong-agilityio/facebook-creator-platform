@@ -34,17 +34,15 @@ type ToastContextValue = {
 };
 
 const toneClasses: Record<ToastTone, string> = {
-  success:
-    'border-[color:color-mix(in_srgb,var(--success)_30%,transparent)] bg-[color:color-mix(in_srgb,var(--panel)_88%,var(--success-soft))] text-[var(--foreground)]',
-  error:
-    'border-[color:color-mix(in_srgb,var(--danger)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--panel)_88%,var(--danger-soft))] text-[var(--foreground)]',
-  info: 'border-[var(--line-strong)] bg-[var(--panel-strong)] text-[var(--foreground)]'
+  success: 'border-emerald-500/25 bg-emerald-500/10 text-foreground',
+  error: 'border-destructive/25 bg-destructive/10 text-foreground',
+  info: 'border-border bg-card text-foreground'
 };
 
 const toneBadgeClasses: Record<ToastTone, string> = {
-  success: 'text-[var(--success)]',
-  error: 'text-[var(--danger)]',
-  info: 'text-[var(--accent-secondary)]'
+  success: 'text-emerald-600 dark:text-emerald-400',
+  error: 'text-destructive',
+  info: 'text-primary'
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -126,7 +124,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   </p>
                   <p className="mt-1 text-sm font-semibold">{toast.title}</p>
                   {toast.description ? (
-                    <p className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       {toast.description}
                     </p>
                   ) : null}
@@ -134,7 +132,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
                 <button
                   type="button"
-                  className="rounded-md px-2 py-1 text-xs font-medium text-[var(--muted-foreground)] transition hover:bg-[var(--panel-contrast)] hover:text-[var(--foreground)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+                  className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition hover:bg-[var(--panel-contrast)] hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   onClick={() => {
                     dismissToast(toast.id);
                   }}

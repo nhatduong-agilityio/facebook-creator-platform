@@ -25,7 +25,7 @@ export function PostMediaPreview({
     return (
       <div
         className={cn(
-          'flex items-center justify-center px-2 text-center text-[11px] text-[var(--muted-foreground)]',
+          'flex items-center justify-center px-2 text-center text-[11px] text-muted-foreground',
           className
         )}
       >
@@ -38,7 +38,7 @@ export function PostMediaPreview({
     return (
       <div
         className={cn(
-          'flex items-center justify-center px-3 text-center text-[11px] text-[var(--muted-foreground)]',
+          'flex items-center justify-center px-3 text-center text-[11px] text-muted-foreground',
           className
         )}
       >

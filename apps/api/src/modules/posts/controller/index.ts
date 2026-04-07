@@ -87,6 +87,8 @@ export class PostController extends BaseController {
 
     return reply
       .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .header('Cross-Origin-Resource-Policy', 'cross-origin')
+      .header('Content-Disposition', 'inline')
       .type(media.mimeType)
       .send(media.buffer);
   }

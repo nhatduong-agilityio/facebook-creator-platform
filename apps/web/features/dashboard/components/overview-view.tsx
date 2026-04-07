@@ -166,10 +166,10 @@ export function OverviewView() {
               onChange={nextValue => {
                 setRange(nextValue === '7' ? 7 : 30);
               }}
-              containerClassName="flex rounded-lg border border-[var(--line)] bg-[var(--panel-muted)] p-1"
-              itemClassName="inline-flex rounded-md px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--accent)]"
-              activeClassName="bg-[var(--accent)] text-white"
-              inactiveClassName="text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              containerClassName="flex rounded-lg border border-border bg-muted p-1"
+              itemClassName="inline-flex rounded-md px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
+              activeClassName="bg-primary text-primary-foreground shadow-sm"
+              inactiveClassName="text-muted-foreground hover:text-foreground"
             />
           </div>
 
@@ -200,7 +200,7 @@ export function OverviewView() {
                         : 'Attention'}
                   </GlassTag>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {item.detail}
                 </p>
               </Card>
@@ -224,7 +224,7 @@ export function OverviewView() {
                     <p className="font-semibold">
                       {getPostDisplayTitle(post.title, post.content)}
                     </p>
-                    <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                    <p className="mt-2 text-sm text-muted-foreground">
                       {getPostExcerpt(post.content, 84)}
                     </p>
                   </div>
@@ -232,14 +232,14 @@ export function OverviewView() {
                     {post.status}
                   </StatusBadge>
                 </div>
-                <p className="mt-3 text-sm text-[var(--muted-foreground)]">
+                <p className="mt-3 text-sm text-muted-foreground">
                   {formatDate(post.scheduledAt)}
                 </p>
               </Card>
             ))}
 
             {scheduledPosts.length === 0 ? (
-              <Card className="border-dashed border-[var(--line-strong)] px-4 py-6 text-sm text-[var(--muted-foreground)] shadow-none">
+              <Card className="border-dashed border-[var(--line-strong)] px-4 py-6 text-sm text-muted-foreground shadow-none">
                 No posts scheduled yet.
               </Card>
             ) : null}
@@ -275,7 +275,7 @@ export function OverviewView() {
                     <p className="truncate font-semibold">
                       {getPostDisplayTitle(post.title, post.content)}
                     </p>
-                    <p className="mt-1 line-clamp-2 text-sm text-[var(--muted-foreground)]">
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {getPostExcerpt(post.content, 108)}
                     </p>
                   </div>
@@ -294,7 +294,7 @@ export function OverviewView() {
             ))}
 
             {recentPosts.length === 0 ? (
-              <div className="py-6 text-sm text-[var(--muted-foreground)]">
+              <div className="py-6 text-sm text-muted-foreground">
                 No recent post activity yet.
               </div>
             ) : null}

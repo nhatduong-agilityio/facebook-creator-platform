@@ -23,13 +23,13 @@ const accentClasses: Record<
   }
 > = {
   blue: {
-    dot: 'bg-[var(--accent)]'
+    dot: 'bg-primary'
   },
   teal: {
     dot: 'bg-[var(--accent-secondary)]'
   },
   coral: {
-    dot: 'bg-[var(--danger)]'
+    dot: 'bg-destructive'
   }
 };
 
@@ -298,7 +298,7 @@ export function FieldError({ message }: { message?: string }) {
   }
 
   return (
-    <p role="alert" className="mt-2 text-xs text-[var(--danger)]">
+    <p role="alert" className="mt-2 text-xs text-destructive">
       {message}
     </p>
   );

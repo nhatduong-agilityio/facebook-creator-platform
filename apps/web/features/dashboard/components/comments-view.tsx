@@ -148,7 +148,7 @@ export function CommentsView() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <SectionHeading eyebrow="Inbox" title="Conversation queue" />
 
-            <Card className="bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--muted-foreground)] shadow-none">
+            <Card className="bg-[var(--panel-strong)] px-4 py-3 text-sm text-muted-foreground shadow-none">
               Showing {filteredItems.length}
             </Card>
           </div>
@@ -166,9 +166,9 @@ export function CommentsView() {
               value={inboxFilter}
               onChange={setInboxFilter}
               containerClassName="flex flex-wrap gap-2 rounded-[1rem]"
-              itemClassName="inline-flex rounded-xl border px-4 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--accent)]"
-              activeClassName="border-[color:color-mix(in_srgb,var(--accent)_40%,transparent)] bg-[var(--accent-soft)] text-[var(--accent-deep)]"
-              inactiveClassName="border-[var(--line)] bg-[var(--panel-strong)] text-[var(--foreground)] hover:border-[var(--line-strong)]"
+              itemClassName="inline-flex rounded-xl border px-4 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
+              activeClassName="border-primary/30 bg-primary/10 text-primary"
+              inactiveClassName="border-[var(--line)] bg-[var(--panel-strong)] text-foreground hover:border-[var(--line-strong)]"
             />
 
             <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
@@ -206,7 +206,7 @@ export function CommentsView() {
                 key={item.id}
                 className={`${subtlePanelClassName} w-full p-4 text-left shadow-none ${
                   activeItem?.id === item.id
-                    ? 'ring-2 ring-[var(--accent-secondary)]'
+                    ? 'ring-2 ring-primary/20 border-primary/30'
                     : ''
                 }`}
               >
@@ -220,7 +220,7 @@ export function CommentsView() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="max-w-[78%]">
                       <p className="font-semibold">{item.postTitle}</p>
-                      <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
                         {item.snippet}
                       </p>
                     </div>
@@ -231,7 +231,7 @@ export function CommentsView() {
                       {item.commentCount === 1 ? '' : 's'}
                     </StatusBadge>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-[var(--muted-foreground)]">
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                     <span>{formatPostStatus(item.postStatus)}</span>
                     <span>•</span>
                     <span>{formatDate(item.updatedAt)}</span>
@@ -241,7 +241,7 @@ export function CommentsView() {
             ))}
 
             {!analyticsPostsQuery.isLoading && filteredItems.length === 0 ? (
-              <Card className="border-dashed border-[var(--line-strong)] px-4 py-6 text-sm text-[var(--muted-foreground)] shadow-none">
+              <Card className="border-dashed border-[var(--line-strong)] px-4 py-6 text-sm text-muted-foreground shadow-none">
                 No comment-heavy posts match the current filter.
               </Card>
             ) : null}
@@ -257,7 +257,7 @@ export function CommentsView() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="max-w-[78%]">
                     <p className="font-semibold">{activeItem.postTitle}</p>
-                    <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
                       {activeItem.snippet}
                     </p>
                   </div>
@@ -326,14 +326,14 @@ export function CommentsView() {
                     Clear
                   </Button>
                 </div>
-                <Card className="mt-4 bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--muted-foreground)] shadow-none">
+                <Card className="mt-4 bg-[var(--panel-strong)] px-4 py-3 text-sm text-muted-foreground shadow-none">
                   Replies are posted to the Facebook post thread for the
                   selected content item.
                 </Card>
               </Card>
             </div>
           ) : (
-            <Card className="mt-6 border-dashed border-[var(--line-strong)] px-4 py-6 text-sm text-[var(--muted-foreground)] shadow-none">
+            <Card className="mt-6 border-dashed border-[var(--line-strong)] px-4 py-6 text-sm text-muted-foreground shadow-none">
               No comment activity yet. Publish content and collect comment
               signals to populate this inbox.
             </Card>
