@@ -46,6 +46,10 @@ function ProvidersInner({
       publishableKey={publicEnv.clerkPublishableKey}
       signInUrl={publicEnv.signInUrl}
       signUpUrl={publicEnv.signUpUrl}
+      signInFallbackRedirectUrl="/dashboard"
+      signInForceRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
+      signUpForceRedirectUrl="/dashboard"
       appearance={clerkAppearance(resolvedTheme)}
     >
       {app}
