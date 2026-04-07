@@ -38,13 +38,12 @@ export default async function SignUpPage() {
                 rootBox: 'w-full max-w-none',
                 headerTitle: 'hidden',
                 headerSubtitle: 'hidden',
-                socialButtonsBlockButtonText:
-                  'font-medium text-[var(--foreground)]',
-                formFieldLabel: 'text-[var(--foreground)]',
+                socialButtonsBlockButtonText: 'font-medium text-foreground',
+                formFieldLabel: 'text-foreground',
                 dividerText:
-                  'text-xs font-medium uppercase tracking-[0.12em] text-[var(--muted-foreground)]',
-                footerActionLink: 'text-[var(--accent)]',
-                identityPreviewText: 'text-[var(--foreground)]'
+                  'text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground',
+                footerActionLink: 'text-primary',
+                identityPreviewText: 'text-foreground'
               }
             }}
           />

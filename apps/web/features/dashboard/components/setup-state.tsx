@@ -20,7 +20,7 @@ export function DashboardSetupState() {
         <Card className="p-5">
           <SectionHeading eyebrow="Environment" title="Required values" />
 
-          <div className="mt-5 rounded-[24px] border border-[var(--line)] bg-[var(--panel-muted)] p-5 font-mono text-sm text-[var(--muted-foreground)]">
+          <div className="mt-5 rounded-[24px] border border-[var(--line)] bg-[var(--panel-muted)] p-5 font-mono text-sm text-muted-foreground">
             <p>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx</p>
             <p>NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in</p>
             <p>NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up</p>

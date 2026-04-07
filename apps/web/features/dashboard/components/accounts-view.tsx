@@ -184,7 +184,7 @@ export function AccountsView() {
                       </StatusBadge>
                     </div>
 
-                    <p className="font-mono text-xs text-[var(--muted-foreground)]">
+                    <p className="font-mono text-xs text-muted-foreground">
                       Page ID: {account.pageId}
                     </p>
 

@@ -3,7 +3,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 export const textareaClassName =
-  'flex min-h-32 w-full rounded-lg border border-[var(--line-strong)] bg-[var(--panel-strong)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_35%,transparent)] disabled:cursor-not-allowed disabled:opacity-50 resize-y aria-[invalid=true]:border-[color:color-mix(in_srgb,var(--danger)_44%,transparent)] aria-[invalid=true]:focus-visible:ring-[color:color-mix(in_srgb,var(--danger)_28%,transparent)]';
+  'flex min-h-32 w-full rounded-lg border border-input bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 resize-y aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive/20';
 
 export type TextareaProps = React.ComponentProps<'textarea'> & {
   invalid?: boolean;

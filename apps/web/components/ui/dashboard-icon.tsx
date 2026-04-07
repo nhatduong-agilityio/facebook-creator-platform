@@ -88,7 +88,7 @@ export function DashboardIcon({ icon }: { icon: DashboardNavigationIcon }) {
     <svg
       aria-hidden="true"
       viewBox="0 0 24 24"
-      className="h-5 w-5 shrink-0 text-[var(--accent)]"
+      className="h-5 w-5 shrink-0 text-primary"
     >
       {iconMap[icon]}
     </svg>

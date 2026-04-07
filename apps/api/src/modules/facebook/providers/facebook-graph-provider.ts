@@ -46,6 +46,15 @@ type FacebookInsightsResponse = {
   }>;
 };
 
+type FacebookInsightsFieldResponse = {
+  insights?: FacebookInsightsResponse;
+};
+
+type FacebookPostReferenceResponse = {
+  post_id?: string;
+  page_story_id?: string;
+};
+
 export class FacebookGraphProvider implements FacebookProviderPort {
   /**
    * Builds a Facebook OAuth URL for connecting a page.
@@ -221,6 +230,11 @@ export class FacebookGraphProvider implements FacebookProviderPort {
     accessToken: string;
     facebookPostId: string;
   }): Promise<FacebookPostMetricsDto> {
+    const normalizedPostId = await this.resolveInsightsPostId(
+      input.facebookPostId,
+      input.accessToken
+    );
+
     const basicResponse = await this.request<FacebookMetricsResponse>(
       `https://graph.facebook.com/v23.0/${input.facebookPostId}?${new URLSearchParams(
         {
@@ -230,24 +244,20 @@ export class FacebookGraphProvider implements FacebookProviderPort {
       ).toString()}`
     );
 
-    const insightsResponse = await this.request<FacebookInsightsResponse>(
-      `https://graph.facebook.com/v23.0/${input.facebookPostId}/insights?${new URLSearchParams(
-        {
-          metric: 'post_impressions,post_engaged_users',
-          access_token: input.accessToken
-        }
-      ).toString()}`
-    ).catch(() => ({ data: [] }));
-
-    const insightData = insightsResponse.data ?? [];
-    console.log('insightData', insightData);
-
+    const insightData = await this.fetchInsightsData(
+      normalizedPostId,
+      input.accessToken
+    );
+    const basicEngagement =
+      (basicResponse.likes?.summary?.total_count ?? 0) +
+      (basicResponse.comments?.summary?.total_count ?? 0);
     const reach =
-      insightData.find(d => d.name === 'post_impressions')?.values?.[0]
-        ?.value ?? 0;
+      this.getInsightValue(insightData, 'post_impressions_unique') ??
+      this.getInsightValue(insightData, 'post_impressions') ??
+      0;
     const engagement =
-      insightData.find(d => d.name === 'post_engaged_users')?.values?.[0]
-        ?.value ?? 0;
+      this.getInsightValue(insightData, 'post_engaged_users') ??
+      basicEngagement;
 
     return {
       likes: basicResponse.likes?.summary?.total_count || 0,
@@ -333,7 +343,10 @@ export class FacebookGraphProvider implements FacebookProviderPort {
     localFile: Awaited<ReturnType<typeof readStoredMediaFile>> | null;
   }): Promise<{ facebookPostId: string }> {
     if (input.localFile) {
-      const response = await this.requestMultipart<{ id: string }>(
+      const response = await this.requestMultipart<{
+        id: string;
+        post_id?: string;
+      }>(
         `https://graph.facebook.com/v23.0/${input.pageId}/photos`,
         {
           access_token: input.accessToken,
@@ -347,7 +360,11 @@ export class FacebookGraphProvider implements FacebookProviderPort {
         }
       );
 
-      return { facebookPostId: response.id };
+      const facebookPostId =
+        response.post_id ??
+        (await this.resolveInsightsPostId(response.id, input.accessToken));
+
+      return { facebookPostId };
     }
 
     const params = new URLSearchParams({
@@ -356,7 +373,7 @@ export class FacebookGraphProvider implements FacebookProviderPort {
       caption: input.caption
     });
 
-    const response = await this.request<{ id: string }>(
+    const response = await this.request<{ id: string; post_id?: string }>(
       `https://graph.facebook.com/v23.0/${input.pageId}/photos`,
       {
         method: 'POST',
@@ -365,7 +382,11 @@ export class FacebookGraphProvider implements FacebookProviderPort {
       }
     );
 
-    return { facebookPostId: response.id };
+    const facebookPostId =
+      response.post_id ??
+      (await this.resolveInsightsPostId(response.id, input.accessToken));
+
+    return { facebookPostId };
   }
 
   private async publishVideo(input: {
@@ -377,7 +398,10 @@ export class FacebookGraphProvider implements FacebookProviderPort {
     localFile: Awaited<ReturnType<typeof readStoredMediaFile>> | null;
   }): Promise<{ facebookPostId: string }> {
     if (input.localFile) {
-      const response = await this.requestMultipart<{ id: string }>(
+      const response = await this.requestMultipart<{
+        id: string;
+        post_id?: string;
+      }>(
         `https://graph.facebook.com/v23.0/${input.pageId}/videos`,
         {
           access_token: input.accessToken,
@@ -392,7 +416,11 @@ export class FacebookGraphProvider implements FacebookProviderPort {
         }
       );
 
-      return { facebookPostId: response.id };
+      const facebookPostId =
+        response.post_id ??
+        (await this.resolveInsightsPostId(response.id, input.accessToken));
+
+      return { facebookPostId };
     }
 
     const params = new URLSearchParams({
@@ -405,7 +433,7 @@ export class FacebookGraphProvider implements FacebookProviderPort {
       params.append('title', input.title);
     }
 
-    const response = await this.request<{ id: string }>(
+    const response = await this.request<{ id: string; post_id?: string }>(
       `https://graph.facebook.com/v23.0/${input.pageId}/videos`,
       {
         method: 'POST',
@@ -414,7 +442,85 @@ export class FacebookGraphProvider implements FacebookProviderPort {
       }
     );
 
-    return { facebookPostId: response.id };
+    const facebookPostId =
+      response.post_id ??
+      (await this.resolveInsightsPostId(response.id, input.accessToken));
+
+    return { facebookPostId };
+  }
+
+  private async fetchInsightsData(
+    facebookPostId: string,
+    accessToken: string
+  ): Promise<FacebookInsightsResponse['data']> {
+    const metricGroups = [
+      'post_impressions_unique,post_engaged_users',
+      'post_impressions,post_engaged_users'
+    ];
+
+    for (const metrics of metricGroups) {
+      const direct = await this.request<FacebookInsightsResponse>(
+        `https://graph.facebook.com/v23.0/${facebookPostId}/insights?${new URLSearchParams(
+          {
+            metric: metrics,
+            access_token: accessToken
+          }
+        ).toString()}`
+      ).catch(() => null);
+
+      if (direct?.data?.length) {
+        return direct.data;
+      }
+
+      const fieldFallback = await this.request<FacebookInsightsFieldResponse>(
+        `https://graph.facebook.com/v23.0/${facebookPostId}?${new URLSearchParams(
+          {
+            fields: `insights.metric(${metrics})`,
+            access_token: accessToken
+          }
+        ).toString()}`
+      ).catch(() => null);
+
+      if (fieldFallback?.insights?.data?.length) {
+        return fieldFallback.insights.data;
+      }
+    }
+
+    return [];
+  }
+
+  private async resolveInsightsPostId(
+    facebookPostId: string,
+    accessToken: string
+  ): Promise<string> {
+    if (facebookPostId.includes('_')) {
+      return facebookPostId;
+    }
+
+    const response = await this.request<FacebookPostReferenceResponse>(
+      `https://graph.facebook.com/v23.0/${facebookPostId}?${new URLSearchParams(
+        {
+          fields: 'post_id,page_story_id',
+          access_token: accessToken
+        }
+      ).toString()}`
+    ).catch(() => null);
+
+    return (
+      response?.post_id?.trim() ||
+      response?.page_story_id?.trim() ||
+      facebookPostId
+    );
+  }
+
+  private getInsightValue(
+    data: FacebookInsightsResponse['data'],
+    metricName: string
+  ): number | null {
+    const value = data?.find(item => item.name === metricName)?.values?.[0]
+      ?.value;
+
+    return typeof value === 'number' ? value : null;
   }
 
   private async requestMultipart<T>(

@@ -3,7 +3,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const nativeSelectClassName =
-  'flex h-11 w-full appearance-none rounded-lg border border-[var(--line-strong)] bg-[var(--panel-strong)] px-4 py-2.5 pr-10 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--accent)_35%,transparent)] disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-[color:color-mix(in_srgb,var(--danger)_44%,transparent)] aria-[invalid=true]:focus-visible:ring-[color:color-mix(in_srgb,var(--danger)_28%,transparent)]';
+  'flex h-11 w-full appearance-none rounded-lg border border-input bg-background px-4 py-2.5 pr-10 text-sm text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive/20';
 
 export type NativeSelectProps = React.ComponentProps<'select'> & {
   invalid?: boolean;
@@ -33,7 +33,7 @@ export const NativeSelect = React.forwardRef<
       )}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-[var(--muted-foreground)]"
+        className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-muted-foreground"
       >
         ▼
       </span>

@@ -29,13 +29,23 @@ const connectSources = [
     : [])
 ];
 
+const mediaSources = [
+  "'self'",
+  'data:',
+  'blob:',
+  'https:',
+  ...(apiOrigin ? [apiOrigin] : []),
+  ...(isDevelopment ? ['http://localhost:3000', 'http://127.0.0.1:3000'] : [])
+];
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${
     isDevelopment ? "'unsafe-eval' " : ''
   }${clerkSources.join(' ')}`.trim(),
   `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: https:`,
+  `img-src ${mediaSources.join(' ')}`,
+  `media-src ${mediaSources.join(' ')}`,
   `font-src 'self' data:`,
   `connect-src ${connectSources.join(' ')}`,
   `frame-src ${clerkSources.join(' ')}`,
