@@ -13,8 +13,6 @@ export type SessionRecord = {
   clerkUserId: string;
   email: string;
   name: string | null;
-  role: BillingPlan['code'];
-  plan: BillingPlan;
   createdAt: string;
   updatedAt: string;
 };

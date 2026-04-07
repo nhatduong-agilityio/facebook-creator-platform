@@ -30,6 +30,21 @@ export class UserRepository
     });
   }
 
+  async findByEmail(email: string): Promise<UserEntity | null> {
+    return await this.repo.findOne({
+      where: { email },
+      select: [
+        'id',
+        'clerkUserId',
+        'email',
+        'name',
+        'stripeCustomerId',
+        'createdAt',
+        'updatedAt'
+      ]
+    });
+  }
+
   async findByStripeCustomerId(
     stripeCustomerId: string
   ): Promise<UserEntity | null> {
@@ -55,6 +70,16 @@ export class UserRepository
     const existing = await this.findByClerkId(data.clerkUserId);
 
     if (!existing) {
+      const existingByEmail = await this.findByEmail(data.email);
+
+      if (existingByEmail) {
+        existingByEmail.clerkUserId = data.clerkUserId;
+        existingByEmail.email = data.email;
+        existingByEmail.name = data.name ?? null;
+
+        return await this.repo.save(existingByEmail);
+      }
+
       return await this.create(data);
     }
 

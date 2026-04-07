@@ -1,5 +1,6 @@
 'use client';
 
+import { useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -20,11 +21,17 @@ import {
 import { formatDate, formatLimit } from '@/features/dashboard/lib/format';
 
 export function SettingsView() {
+  const { user } = useUser();
   const sessionQuery = useDashboardSessionQuery();
   const billingQuery = useDashboardBillingQuery();
   const accountsQuery = useDashboardAccountsQuery();
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const currentPlan = billingQuery.data?.plan;
+  const displayName = user?.fullName ?? sessionQuery.data?.name ?? 'Not set';
+  const displayEmail =
+    user?.primaryEmailAddress?.emailAddress ??
+    sessionQuery.data?.email ??
+    'Loading';
 
   return (
     <>
@@ -56,17 +63,11 @@ export function SettingsView() {
           <SectionHeading eyebrow="Identity" title="Account" />
 
           <div className="space-y-3">
+            <InfoRow label="Name" value={displayName} />
+            <InfoRow label="Email" value={displayEmail} />
             <InfoRow
-              label="Name"
-              value={sessionQuery.data?.name ?? 'Not set'}
-            />
-            <InfoRow
-              label="Email"
-              value={sessionQuery.data?.email ?? 'Loading'}
-            />
-            <InfoRow
-              label="Role"
-              value={sessionQuery.data?.role.toUpperCase() ?? 'Loading'}
+              label="Access"
+              value={currentPlan?.code.toUpperCase() ?? 'Loading'}
             />
             <InfoRow
               label="Created"

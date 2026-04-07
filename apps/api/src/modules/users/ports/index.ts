@@ -9,6 +9,7 @@ export type SaveClerkUserInput = {
 export interface UserLookupPort {
   findById(id: string): Promise<UserEntity | null>;
   findByClerkId(clerkUserId: string): Promise<UserEntity | null>;
+  findByEmail(email: string): Promise<UserEntity | null>;
 }
 
 export interface UserClerkSyncPort extends UserLookupPort {

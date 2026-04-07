@@ -107,7 +107,7 @@ export function BillingView() {
         />
         <MetricCard
           label="Access"
-          value={sessionQuery.data?.role.toUpperCase() ?? 'LOADING'}
+          value={currentPlan?.code.toUpperCase() ?? 'LOADING'}
           accent="teal"
           hint="Effective access role derived from the plan."
         />
