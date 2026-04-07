@@ -105,7 +105,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         aria-live="polite"
         aria-atomic="true"
-        className="pointer-events-none fixed inset-x-0 top-4 z-[100] flex justify-center px-4 sm:justify-end"
+        className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 sm:justify-end"
       >
         <div className="flex w-full max-w-sm flex-col gap-3">
           {toasts.map(toast => (
@@ -122,9 +122,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   >
                     {toast.tone}
                   </p>
-                  <p className="mt-1 text-sm font-semibold">{toast.title}</p>
+                  <p className="mt-1 text-sm font-semibold truncate">
+                    {toast.title}
+                  </p>
                   {toast.description ? (
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground line-clamp-2">
                       {toast.description}
                     </p>
                   ) : null}
