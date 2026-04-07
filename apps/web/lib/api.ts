@@ -45,11 +45,6 @@ export async function apiRequest<T>(
   options: {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
     token?: string | null;
-    profileHint?: {
-      clerkUserId: string;
-      email: string | null;
-      name: string | null;
-    };
     body?: unknown;
     signal?: AbortSignal;
   } = {}
@@ -60,18 +55,6 @@ export async function apiRequest<T>(
 
   if (options.token) {
     headers.set('Authorization', `Bearer ${options.token}`);
-  }
-
-  if (options.profileHint?.clerkUserId) {
-    headers.set('X-Clerk-User-Id', options.profileHint.clerkUserId);
-  }
-
-  if (options.profileHint?.email) {
-    headers.set('X-Clerk-User-Email', options.profileHint.email);
-  }
-
-  if (options.profileHint?.name) {
-    headers.set('X-Clerk-User-Name', options.profileHint.name);
   }
 
   if (options.body !== undefined) {

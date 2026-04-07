@@ -69,8 +69,9 @@ export function buildApp(
 
   app.register(cors, {
     origin: getAuthorizedParties(),
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    credentials: false,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type']
   });
 
   // Raw body parser

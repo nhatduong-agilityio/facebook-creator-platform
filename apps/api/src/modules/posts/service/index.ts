@@ -29,6 +29,7 @@ import {
   deleteStoredMediaIfOwned,
   persistUploadedMedia
 } from '../media-storage';
+import { enqueueMetricsJob } from '@/modules/jobs/queues/metrics-queue';
 
 export class PostService extends BaseService implements PostServicePort {
   constructor(
@@ -178,6 +179,7 @@ export class PostService extends BaseService implements PostServicePort {
         facebookPostId: publishedPost.facebookPostId
       }
     });
+    await enqueueMetricsJob({ postId: publishedPost.id });
 
     return publishedPost;
   }
@@ -266,6 +268,7 @@ export class PostService extends BaseService implements PostServicePort {
         facebookPostId: publishedPost.facebookPostId
       }
     });
+    await enqueueMetricsJob({ postId: publishedPost.id });
 
     return publishedPost;
   }

@@ -34,8 +34,14 @@ export async function enqueuePublishPostJob(
   scheduleAt: Date
 ): Promise<void> {
   const delay = Math.max(scheduleAt.getTime() - Date.now(), 0) + 1000; // Add 1 second to ensure job is processed after scheduleAt.getTime)
+  const queue = getPublishPostQueue();
+  const existingJob = await queue.getJob(data.postId);
 
-  await getPublishPostQueue().add('publish_post_job', data, {
+  if (existingJob) {
+    await existingJob.remove();
+  }
+
+  await queue.add('publish_post_job', data, {
     jobId: data.postId,
     delay,
     removeOnComplete: 100,

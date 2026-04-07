@@ -10,9 +10,9 @@ export function loadEnv(): void {
   }
 
   const candidates = [
-    path.resolve(process.cwd(), '.env'),
-    path.resolve(process.cwd(), 'apps/api/.env'),
     path.resolve(__dirname, '../.env'),
+    path.resolve(process.cwd(), 'apps/api/.env'),
+    path.resolve(process.cwd(), '.env'),
     path.resolve(__dirname, '../../.env')
   ];
 
