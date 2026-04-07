@@ -17,6 +17,7 @@ import type { AuditLogWriterPort } from '@/modules/audit-logs/ports';
 import type { UserEntity } from '@/modules/users/entity';
 import {
   ConflictError,
+  ExternalServiceError,
   NotFoundError,
   ValidationError
 } from '@/shared/errors/errors';
@@ -138,7 +139,8 @@ export class BillingService extends BaseService implements BillingServicePort {
       const customer = await this.stripeProvider.createCustomer({
         email: dbUser.email,
         name: dbUser.name,
-        userId: dbUser.id
+        userId: dbUser.id,
+        idempotencyKey: `billing:customer:create:${dbUser.id}`
       });
 
       stripeCustomerId = customer.customerId;
@@ -153,7 +155,8 @@ export class BillingService extends BaseService implements BillingServicePort {
       priceId: proPriceId,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
-      userId: dbUser.id
+      userId: dbUser.id,
+      idempotencyKey: `billing:checkout:create:${dbUser.id}:${proPriceId}`
     });
 
     if (!session.checkoutUrl) {
@@ -231,13 +234,8 @@ export class BillingService extends BaseService implements BillingServicePort {
       fallbackUserId
     );
     const proPlan = await this.planRepo.getProPlan();
-    const existing =
-      (await this.subscriptionRepo.findByStripeSubscriptionId(
-        subscription.id
-      )) ?? (await this.subscriptionRepo.findCurrentByUserId(user.id));
 
     await this.subscriptionRepo.saveSubscription({
-      id: existing?.id,
       userId: user.id,
       planId: proPlan.id,
       stripeSubscriptionId: subscription.id,
@@ -447,8 +445,14 @@ export class BillingService extends BaseService implements BillingServicePort {
       return await this.subscriptionRepo.findByStripeSubscriptionId(
         currentStripeSubscription.id
       );
-    } catch {
-      return null;
+    } catch (error) {
+      console.error(
+        '[Billing] Failed to reconcile subscription with Stripe.',
+        error
+      );
+      throw new ExternalServiceError(
+        'Failed to synchronize subscription with Stripe'
+      );
     }
   }
 

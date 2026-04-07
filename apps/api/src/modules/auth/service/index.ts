@@ -4,12 +4,12 @@ import { BaseService } from '@/shared/service';
 // Types
 import type { UserEntity } from '@/modules/users/entity';
 import type {
-  AuthProfileHint,
   AuthServicePort,
   ClerkIdentityProviderPort,
   ClerkWebhookEventPayload
 } from '../ports';
 import type { UserClerkSyncPort } from '@/modules/users/ports';
+import { ExternalServiceError } from '@/shared/errors/errors';
 
 export class AuthService extends BaseService implements AuthServicePort {
   constructor(
@@ -29,19 +29,13 @@ export class AuthService extends BaseService implements AuthServicePort {
    * @param {string} clerkUserId - the Clerk user ID to find or create a user for
    * @returns {Promise<UserEntity>} - a promise that resolves to a user entity
    */
-  async getOrCreateUser(
-    clerkUserId: string,
-    profileHint?: AuthProfileHint
-  ): Promise<UserEntity> {
+  async getOrCreateUser(clerkUserId: string): Promise<UserEntity> {
     const existing = await this.userRepo.findByClerkId(clerkUserId);
-    const normalizedHint = this.normalizeProfileHint(clerkUserId, profileHint);
-    let refreshedProfile:
-      | {
-          clerkUserId: string;
-          email: string;
-          name: string | null;
-        }
-      | undefined;
+    let refreshedProfile: {
+      clerkUserId: string;
+      email: string;
+      name: string | null;
+    };
 
     try {
       const clerkUser = await this.clerkProvider.getUserProfile(clerkUserId);
@@ -60,44 +54,17 @@ export class AuthService extends BaseService implements AuthServicePort {
 
       return existing;
     } catch (error) {
-      if (normalizedHint) {
-        if (
-          !existing ||
-          this.shouldRefreshExistingUser(existing, normalizedHint)
-        ) {
-          console.warn(
-            '[Auth] Falling back to frontend Clerk profile hint because backend profile lookup failed.',
-            error
-          );
-
-          return await this.syncClerkUser(normalizedHint);
-        }
-
-        return existing;
-      }
-
-      if (existing && refreshedProfile) {
+      if (existing && !existing.email.endsWith('@clerk.local')) {
         console.warn(
-          '[Auth] Failed to persist refreshed Clerk profile, returning in-memory identity instead.',
+          '[Auth] Returning existing user because Clerk profile refresh failed.',
           error
         );
-
-        return {
-          ...existing,
-          email: refreshedProfile.email,
-          name: refreshedProfile.name
-        };
-      }
-
-      if (existing) {
         return existing;
       }
 
-      return await this.syncClerkUser({
-        clerkUserId,
-        email: `${clerkUserId}@clerk.local`,
-        name: null
-      });
+      throw new ExternalServiceError(
+        'Failed to synchronize the signed-in user with Clerk'
+      );
     }
   }
 
@@ -115,10 +82,10 @@ export class AuthService extends BaseService implements AuthServicePort {
     switch (event.type) {
       case 'user.created':
       case 'user.updated':
-        return event.data.id
+        return event.data.id && event.data.email
           ? await this.syncClerkUser({
               clerkUserId: event.data.id,
-              email: event.data.email ?? `${event.data.id}@clerk.local`,
+              email: event.data.email,
               name: this.buildName(event.data.firstName, event.data.lastName)
             })
           : null;
@@ -191,32 +158,5 @@ export class AuthService extends BaseService implements AuthServicePort {
       existingName !== nextName;
 
     return hasFallbackEmail || emailChanged || nameMissing || nameChanged;
-  }
-
-  private normalizeProfileHint(
-    clerkUserId: string,
-    profileHint?: AuthProfileHint
-  ):
-    | {
-        clerkUserId: string;
-        email: string;
-        name: string | null;
-      }
-    | undefined {
-    if (!profileHint || profileHint.clerkUserId !== clerkUserId) {
-      return undefined;
-    }
-
-    const email = profileHint.email?.trim();
-
-    if (!email || email.endsWith('@clerk.local')) {
-      return undefined;
-    }
-
-    return {
-      clerkUserId,
-      email,
-      name: profileHint.name?.trim() || null
-    };
   }
 }

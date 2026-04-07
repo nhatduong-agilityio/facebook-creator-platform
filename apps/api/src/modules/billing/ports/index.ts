@@ -44,6 +44,7 @@ export interface StripeBillingProviderPort {
     email: string;
     name?: string | null;
     userId: string;
+    idempotencyKey: string;
   }): Promise<{ customerId: string }>;
   createCheckoutSession(input: {
     customerId: string;
@@ -51,6 +52,7 @@ export interface StripeBillingProviderPort {
     successUrl: string;
     cancelUrl: string;
     userId: string;
+    idempotencyKey: string;
   }): Promise<{
     sessionId: string;
     checkoutUrl: string | null;

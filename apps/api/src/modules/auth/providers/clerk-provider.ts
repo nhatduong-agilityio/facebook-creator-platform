@@ -12,8 +12,6 @@ import { createRuntimeClerkClient } from '../lib/clerk';
 export class ClerkProvider
   implements ClerkIdentityProviderPort, ClerkWebhookVerifierPort
 {
-  private readonly fallbackEmailDomain = 'clerk.local';
-
   /**
    * Retrieves a Clerk user profile by their Clerk user ID.
    *
@@ -33,11 +31,14 @@ export class ClerkProvider
       user.emailAddresses.find(
         emailAddress => emailAddress.id === user.primaryEmailAddressId
       )?.emailAddress ?? user.emailAddresses[0]?.emailAddress;
-    const emailFallback = `${user.id}@${this.fallbackEmailDomain}`;
+
+    if (!primaryEmail) {
+      throw new Error('Clerk user is missing a primary email address');
+    }
 
     return {
       id: user.id,
-      email: primaryEmail ?? emailFallback,
+      email: primaryEmail,
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null
     };
@@ -71,9 +72,7 @@ export class ClerkProvider
         type: event.type,
         data: {
           id: event.data.id,
-          email:
-            primaryEmail ??
-            `${event.data.id ?? 'unknown'}@${this.fallbackEmailDomain}`,
+          email: primaryEmail ?? null,
           firstName: event.data.first_name ?? null,
           lastName: event.data.last_name ?? null
         }

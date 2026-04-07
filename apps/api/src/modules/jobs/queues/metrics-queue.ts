@@ -40,8 +40,14 @@ export async function enqueueMetricsJob(
     : data.userId
       ? `user-${data.userId}`
       : `all:${Date.now()}`;
+  const queue = getMetricsQueue();
+  const existingJob = await queue.getJob(jobId);
 
-  await getMetricsQueue().add('fetch_metrics_job', data, {
+  if (existingJob) {
+    await existingJob.remove();
+  }
+
+  await queue.add('fetch_metrics_job', data, {
     jobId,
     removeOnComplete: 100,
     removeOnFail: 100

@@ -23,14 +23,20 @@ export class StripeProvider implements StripeBillingProviderPort {
     email: string;
     name?: string | null;
     userId: string;
+    idempotencyKey: string;
   }): Promise<{ customerId: string }> {
-    const customer = await this.stripeClient.customers.create({
-      email: input.email,
-      name: input.name ?? undefined,
-      metadata: {
-        userId: input.userId
+    const customer = await this.stripeClient.customers.create(
+      {
+        email: input.email,
+        name: input.name ?? undefined,
+        metadata: {
+          userId: input.userId
+        }
+      },
+      {
+        idempotencyKey: input.idempotencyKey
       }
-    });
+    );
 
     return { customerId: customer.id };
   }
@@ -53,22 +59,28 @@ export class StripeProvider implements StripeBillingProviderPort {
     successUrl: string;
     cancelUrl: string;
     userId: string;
+    idempotencyKey: string;
   }): Promise<{
     sessionId: string;
     checkoutUrl: string | null;
     subscriptionId: string | null;
   }> {
-    const session = await this.stripeClient.checkout.sessions.create({
-      mode: 'subscription',
-      customer: input.customerId,
-      line_items: [{ price: input.priceId, quantity: 1 }],
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      allow_promotion_codes: true,
-      metadata: {
-        userId: input.userId
+    const session = await this.stripeClient.checkout.sessions.create(
+      {
+        mode: 'subscription',
+        customer: input.customerId,
+        line_items: [{ price: input.priceId, quantity: 1 }],
+        success_url: input.successUrl,
+        cancel_url: input.cancelUrl,
+        allow_promotion_codes: true,
+        metadata: {
+          userId: input.userId
+        }
+      },
+      {
+        idempotencyKey: input.idempotencyKey
       }
-    });
+    );
 
     return {
       sessionId: session.id,

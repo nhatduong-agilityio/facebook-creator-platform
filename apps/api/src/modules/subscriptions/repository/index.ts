@@ -53,7 +53,16 @@ export class SubscriptionRepository
     data: Partial<SubscriptionEntity> &
       Pick<SubscriptionEntity, 'userId' | 'planId'>
   ): Promise<SubscriptionEntity> {
-    const entity = this.repo.create(data);
+    const existing = data.id
+      ? await this.findById(data.id)
+      : data.stripeSubscriptionId
+        ? await this.findByStripeSubscriptionId(data.stripeSubscriptionId)
+        : await this.findCurrentByUserId(data.userId);
+
+    const entity = this.repo.create(
+      existing ? { ...existing, ...data, id: existing.id } : data
+    );
+
     return await this.repo.save(entity);
   }
 }
