@@ -19,6 +19,12 @@ export type ClerkWebhookEventPayload = {
   };
 };
 
+export type AuthProfileHint = {
+  clerkUserId: string;
+  email: string | null;
+  name: string | null;
+};
+
 export interface ClerkIdentityProviderPort {
   getUserProfile(clerkUserId: string): Promise<ClerkUserProfile>;
 }
@@ -28,6 +34,9 @@ export interface ClerkWebhookVerifierPort {
 }
 
 export interface AuthServicePort {
-  getOrCreateUser(clerkUserId: string): Promise<UserEntity>;
+  getOrCreateUser(
+    clerkUserId: string,
+    profileHint?: AuthProfileHint
+  ): Promise<UserEntity>;
   syncClerkWebhook(event: ClerkWebhookEventPayload): Promise<UserEntity | null>;
 }

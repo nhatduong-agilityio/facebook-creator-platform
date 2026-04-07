@@ -4,6 +4,7 @@ import { BaseService } from '@/shared/service';
 // Types
 import type { UserEntity } from '@/modules/users/entity';
 import type {
+  AuthProfileHint,
   AuthServicePort,
   ClerkIdentityProviderPort,
   ClerkWebhookEventPayload
@@ -28,19 +29,76 @@ export class AuthService extends BaseService implements AuthServicePort {
    * @param {string} clerkUserId - the Clerk user ID to find or create a user for
    * @returns {Promise<UserEntity>} - a promise that resolves to a user entity
    */
-  async getOrCreateUser(clerkUserId: string): Promise<UserEntity> {
-    // Find existing user by Clerk ID
+  async getOrCreateUser(
+    clerkUserId: string,
+    profileHint?: AuthProfileHint
+  ): Promise<UserEntity> {
     const existing = await this.userRepo.findByClerkId(clerkUserId);
-    if (existing) return existing;
+    const normalizedHint = this.normalizeProfileHint(clerkUserId, profileHint);
+    let refreshedProfile:
+      | {
+          clerkUserId: string;
+          email: string;
+          name: string | null;
+        }
+      | undefined;
 
-    // Fetch authoritative profile from Clerk
-    const clerkUser = await this.clerkProvider.getUserProfile(clerkUserId);
+    try {
+      const clerkUser = await this.clerkProvider.getUserProfile(clerkUserId);
+      refreshedProfile = {
+        clerkUserId: clerkUser.id,
+        email: clerkUser.email,
+        name: this.buildName(clerkUser.firstName, clerkUser.lastName)
+      };
 
-    return await this.syncClerkUser({
-      clerkUserId: clerkUser.id,
-      email: clerkUser.email,
-      name: this.buildName(clerkUser.firstName, clerkUser.lastName)
-    });
+      if (
+        !existing ||
+        this.shouldRefreshExistingUser(existing, refreshedProfile)
+      ) {
+        return await this.syncClerkUser(refreshedProfile);
+      }
+
+      return existing;
+    } catch (error) {
+      if (normalizedHint) {
+        if (
+          !existing ||
+          this.shouldRefreshExistingUser(existing, normalizedHint)
+        ) {
+          console.warn(
+            '[Auth] Falling back to frontend Clerk profile hint because backend profile lookup failed.',
+            error
+          );
+
+          return await this.syncClerkUser(normalizedHint);
+        }
+
+        return existing;
+      }
+
+      if (existing && refreshedProfile) {
+        console.warn(
+          '[Auth] Failed to persist refreshed Clerk profile, returning in-memory identity instead.',
+          error
+        );
+
+        return {
+          ...existing,
+          email: refreshedProfile.email,
+          name: refreshedProfile.name
+        };
+      }
+
+      if (existing) {
+        return existing;
+      }
+
+      return await this.syncClerkUser({
+        clerkUserId,
+        email: `${clerkUserId}@clerk.local`,
+        name: null
+      });
+    }
   }
 
   /**
@@ -113,5 +171,52 @@ export class AuthService extends BaseService implements AuthServicePort {
       [firstName, lastName].filter(Boolean).join(' ').trim() || null;
 
     return fullName;
+  }
+
+  private shouldRefreshExistingUser(
+    existing: UserEntity,
+    nextProfile: {
+      email: string;
+      name: string | null;
+    }
+  ): boolean {
+    const hasFallbackEmail = existing.email.endsWith('@clerk.local');
+    const emailChanged = existing.email !== nextProfile.email;
+    const existingName = existing.name?.trim() ?? '';
+    const nextName = nextProfile.name?.trim() ?? '';
+    const nameMissing = existingName.length === 0 && nextName.length > 0;
+    const nameChanged =
+      existingName.length > 0 &&
+      nextName.length > 0 &&
+      existingName !== nextName;
+
+    return hasFallbackEmail || emailChanged || nameMissing || nameChanged;
+  }
+
+  private normalizeProfileHint(
+    clerkUserId: string,
+    profileHint?: AuthProfileHint
+  ):
+    | {
+        clerkUserId: string;
+        email: string;
+        name: string | null;
+      }
+    | undefined {
+    if (!profileHint || profileHint.clerkUserId !== clerkUserId) {
+      return undefined;
+    }
+
+    const email = profileHint.email?.trim();
+
+    if (!email || email.endsWith('@clerk.local')) {
+      return undefined;
+    }
+
+    return {
+      clerkUserId,
+      email,
+      name: profileHint.name?.trim() || null
+    };
   }
 }

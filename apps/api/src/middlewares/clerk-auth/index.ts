@@ -1,14 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { getAuth } from '@clerk/fastify';
 
+import { verifyClerkSessionToken } from '@/modules/auth/lib/clerk';
 import { UnauthorizedError } from '@/shared/errors/errors';
 
 /**
- * Fastify preHandler hook that verifies a Clerk JWT via clerkPlugin.
- *
- * clerkPlugin (registered in app.ts) validates the token and attaches
- * auth state to the request. getAuth() reads that state — no manual
- * token parsing needed.
+ * Fastify preHandler hook that verifies a Clerk bearer session token.
  *
  * On success:  sets req.user.id = userId (trusted)
  * On failure:  throws UnauthorizedError → global error handler → 401
@@ -21,17 +17,31 @@ import { UnauthorizedError } from '@/shared/errors/errors';
 export function clerkAuthMiddleware(
   req: FastifyRequest,
   _reply: FastifyReply
-): void {
-  try {
-    const { isAuthenticated, userId } = getAuth(req);
+): Promise<void> {
+  const authorizationHeader = req.headers.authorization;
 
-    if (!isAuthenticated || !userId) {
-      throw new UnauthorizedError('Authentication required');
-    }
-
-    req.user = { id: userId };
-  } catch (err) {
-    if (err instanceof UnauthorizedError) throw err;
-    throw new UnauthorizedError('Invalid authentication');
+  if (!authorizationHeader) {
+    throw new UnauthorizedError('Authentication required');
   }
+
+  const [scheme, token] = authorizationHeader.split(' ');
+
+  if (!scheme || scheme.toLowerCase() !== 'bearer' || !token) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  return verifyClerkSessionToken(token)
+    .then(({ clerkUserId }) => {
+      req.user = { id: clerkUserId };
+    })
+    .catch(error => {
+      req.log.warn(
+        {
+          message: error instanceof Error ? error.message : String(error),
+          path: req.url
+        },
+        '[Auth] Bearer token verification failed'
+      );
+      throw new UnauthorizedError('Authentication required');
+    });
 }

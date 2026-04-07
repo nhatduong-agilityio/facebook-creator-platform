@@ -1,6 +1,5 @@
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import { clerkPlugin } from '@clerk/fastify';
 import fastify, {
   type FastifyServerOptions,
   type FastifyInstance
@@ -31,6 +30,7 @@ import { StripeProvider } from './modules/billing/providers/stripe-provider';
 import { BillingService } from './modules/billing/service';
 import { PlanRepository } from './modules/plans/repository';
 import { createBillingModule } from './modules/billing/module';
+import { getAuthorizedParties } from './modules/auth/lib/clerk';
 
 /**
  * Builds and configures the Fastify application.
@@ -68,19 +68,10 @@ export function buildApp(
   });
 
   app.register(cors, {
-    origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+    origin: getAuthorizedParties(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
   });
-
-  if (process.env.CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY) {
-    app.register(clerkPlugin, {
-      publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
-      secretKey: process.env.CLERK_SECRET_KEY
-    });
-  } else {
-    app.log.warn('No Clerk keys found in env vars. Skipping Clerk plugin.');
-  }
 
   // Raw body parser
   // Stripe webhooks require the raw Buffer to verify the signature.
@@ -163,11 +154,7 @@ export function buildApp(
     );
 
     // Modules
-    const authModule = createAuthModule(
-      authService,
-      billingService,
-      clerkProvider
-    );
+    const authModule = createAuthModule(authService, clerkProvider);
     const facebookModule = createFacebookModule(facebookService, authService);
     const postModule = createPostModule(
       postService,
