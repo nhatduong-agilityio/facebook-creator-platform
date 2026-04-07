@@ -26,6 +26,13 @@ export default async function SignUpPage() {
       {clerkConfigured ? (
         <div className="auth-clerk-surface">
           <SignUp
+            routing="path"
+            path="/sign-up"
+            signInUrl="/sign-in"
+            fallbackRedirectUrl="/dashboard"
+            forceRedirectUrl="/dashboard"
+            signInFallbackRedirectUrl="/dashboard"
+            signInForceRedirectUrl="/dashboard"
             appearance={{
               elements: {
                 rootBox: 'w-full max-w-none',
