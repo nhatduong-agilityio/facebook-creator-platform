@@ -88,3 +88,17 @@ export function startWorkers(dataSource: DataSource): () => Promise<void> {
     await Promise.all([publishWorker.close(), metricsWorker.close()]);
   };
 }
+
+export function shouldRunEmbeddedWorkers(): boolean {
+  const configured = process.env.RUN_EMBEDDED_WORKERS?.trim().toLowerCase();
+
+  if (configured === 'true') {
+    return true;
+  }
+
+  if (configured === 'false') {
+    return false;
+  }
+
+  return process.env.NODE_ENV !== 'production';
+}

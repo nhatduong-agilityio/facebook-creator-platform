@@ -37,12 +37,13 @@ type FacebookMeResponse = {
 type FacebookMetricsResponse = {
   likes?: { summary?: { total_count?: number } };
   comments?: { summary?: { total_count?: number } };
-  insights?: {
-    data?: Array<{
-      name: string;
-      values?: Array<{ value: number }>;
-    }>;
-  };
+};
+
+type FacebookInsightsResponse = {
+  data?: Array<{
+    name: string;
+    values?: Array<{ value: number }>;
+  }>;
 };
 
 export class FacebookGraphProvider implements FacebookProviderPort {
@@ -220,31 +221,37 @@ export class FacebookGraphProvider implements FacebookProviderPort {
     accessToken: string;
     facebookPostId: string;
   }): Promise<FacebookPostMetricsDto> {
-    const fields = [
-      'likes.summary(true)',
-      'comments.summary(true)',
-      'insights.metric(post_impressions,post_engaged_users)'
-    ].join(',');
-
-    const response = await this.request<FacebookMetricsResponse>(
+    const basicResponse = await this.request<FacebookMetricsResponse>(
       `https://graph.facebook.com/v23.0/${input.facebookPostId}?${new URLSearchParams(
         {
-          fields,
+          fields: 'likes.summary(true),comments.summary(true)',
           access_token: input.accessToken
         }
       ).toString()}`
     );
 
+    const insightsResponse = await this.request<FacebookInsightsResponse>(
+      `https://graph.facebook.com/v23.0/${input.facebookPostId}/insights?${new URLSearchParams(
+        {
+          metric: 'post_impressions,post_engaged_users',
+          access_token: input.accessToken
+        }
+      ).toString()}`
+    ).catch(() => ({ data: [] }));
+
+    const insightData = insightsResponse.data ?? [];
+    console.log('insightData', insightData);
+
     const reach =
-      response.insights?.data?.find(d => d.name === 'post_impressions')
-        ?.values?.[0]?.value ?? 0;
+      insightData.find(d => d.name === 'post_impressions')?.values?.[0]
+        ?.value ?? 0;
     const engagement =
-      response.insights?.data?.find(d => d.name === 'post_engaged_users')
-        ?.values?.[0]?.value ?? 0;
+      insightData.find(d => d.name === 'post_engaged_users')?.values?.[0]
+        ?.value ?? 0;
 
     return {
-      likes: response.likes?.summary?.total_count || 0,
-      comments: response.comments?.summary?.total_count || 0,
+      likes: basicResponse.likes?.summary?.total_count || 0,
+      comments: basicResponse.comments?.summary?.total_count || 0,
       reach,
       engagement
     };
