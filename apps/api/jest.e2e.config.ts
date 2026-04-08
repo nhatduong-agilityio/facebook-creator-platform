@@ -6,7 +6,8 @@ const config: Config = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/e2e/**/*.test.ts'],
   moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
-  setupFiles: ['<rootDir>/src/__tests__/setup.ts']
+  setupFiles: ['<rootDir>/src/__tests__/setup.ts'],
+  maxWorkers: 1
 };
 
 export default config;
