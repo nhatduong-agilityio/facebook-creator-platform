@@ -7,7 +7,7 @@ import type {
 } from '../ports';
 import type { FastifyRequest } from 'fastify';
 import { verifyWebhook } from '@clerk/fastify/webhooks';
-import { createRuntimeClerkClient } from '../lib/clerk';
+import { clerkClient } from '@clerk/fastify';
 
 export class ClerkProvider
   implements ClerkIdentityProviderPort, ClerkWebhookVerifierPort
@@ -24,7 +24,6 @@ export class ClerkProvider
    * @returns {Promise<ClerkUserProfile>} - a promise that resolves to a Clerk user profile
    */
   async getUserProfile(clerkUserId: string): Promise<ClerkUserProfile> {
-    const clerkClient = createRuntimeClerkClient();
     const user = await clerkClient.users.getUser(clerkUserId);
 
     const primaryEmail =

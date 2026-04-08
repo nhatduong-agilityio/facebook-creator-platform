@@ -14,7 +14,7 @@ import { UnauthorizedError } from '@/shared/errors/errors';
  *
  * Do NOT attach to webhook routes — those verify via Stripe/Facebook signatures.
  */
-export function clerkAuthMiddleware(
+export async function clerkAuthMiddleware(
   req: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> {
@@ -30,18 +30,19 @@ export function clerkAuthMiddleware(
     throw new UnauthorizedError('Authentication required');
   }
 
-  return verifyClerkSessionToken(token)
-    .then(({ clerkUserId }) => {
-      req.user = { id: clerkUserId };
-    })
-    .catch(error => {
-      req.log.warn(
-        {
-          message: error instanceof Error ? error.message : String(error),
-          path: req.url
-        },
-        '[Auth] Bearer token verification failed'
-      );
-      throw new UnauthorizedError('Authentication required');
-    });
+  try {
+    const { clerkUserId } = await verifyClerkSessionToken(token);
+
+    req.user = { id: clerkUserId };
+  } catch (error) {
+    req.log.warn(
+      {
+        message: error instanceof Error ? error.message : String(error),
+        path: req.url
+      },
+      '[Auth] Bearer token verification failed'
+    );
+
+    throw new UnauthorizedError('Authentication required');
+  }
 }

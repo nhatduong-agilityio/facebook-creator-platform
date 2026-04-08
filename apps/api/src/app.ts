@@ -4,6 +4,8 @@ import fastify, {
   type FastifyServerOptions,
   type FastifyInstance
 } from 'fastify';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import type { DataSource } from 'typeorm';
 
 import { globalErrorHandler } from './shared/errors/error-handler';
@@ -30,7 +32,6 @@ import { StripeProvider } from './modules/billing/providers/stripe-provider';
 import { BillingService } from './modules/billing/service';
 import { PlanRepository } from './modules/plans/repository';
 import { createBillingModule } from './modules/billing/module';
-import { getAuthorizedParties } from './modules/auth/lib/clerk';
 
 /**
  * Builds and configures the Fastify application.
@@ -48,7 +49,12 @@ export function buildApp(
   const { logger: loggerOpt, ...restOpts } = opts;
 
   const app = fastify({
-    logger: loggerOpt ?? { level: process.env.LOG_LEVEL ?? 'info' },
+    logger: loggerOpt ?? {
+      level: process.env.LOG_LEVEL ?? 'info',
+      transport: {
+        target: '@fastify/one-line-logger'
+      }
+    },
     bodyLimit: Number(process.env.API_BODY_LIMIT_BYTES ?? 25 * 1024 * 1024),
     // Allows Fastify to use Error.cause for better error context
     routerOptions: {
@@ -68,10 +74,37 @@ export function buildApp(
   });
 
   app.register(cors, {
-    origin: getAuthorizedParties(),
+    origin: true,
     credentials: false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type']
+  });
+
+  app.register(swagger, {
+    openapi: {
+      info: {
+        title: 'Facebook Creator Platform API',
+        version: '1.0.0',
+        description:
+          'Basic SaaS backend for Facebook content management, scheduling, billing and analytics.'
+      },
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+            description: 'Enter your Clerk JWT token'
+          }
+        }
+      },
+      security: [{ bearerAuth: [] }],
+      servers: [{ url: 'http://127.0.0.1:3000/api/v1' }]
+    }
+  });
+
+  app.register(swaggerUi, {
+    routePrefix: '/docs'
   });
 
   // Raw body parser

@@ -17,7 +17,7 @@ export function useApiClient() {
     path: string,
     options?: RequestOptions
   ): Promise<T> {
-    const token = await getToken({ skipCache: true });
+    const token = await getToken({ skipCache: true, template: 'backend' });
 
     return await apiRequest<T>(path, {
       method: options?.method,

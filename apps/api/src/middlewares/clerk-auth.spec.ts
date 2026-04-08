@@ -18,26 +18,26 @@ describe('clerkAuthMiddleware', () => {
     jest.clearAllMocks();
   });
 
-  it('rejects missing authorization headers', () => {
+  it('rejects missing authorization headers', async () => {
     const req = {
       headers: {},
       log: { warn: jest.fn() }
     };
 
-    expect(() =>
+    await expect(
       clerkAuthMiddleware(req as unknown as FastifyRequest, {} as FastifyReply)
-    ).toThrow(UnauthorizedError);
+    ).rejects.toThrow(UnauthorizedError);
   });
 
-  it('rejects invalid authorization schemes', () => {
+  it('rejects invalid authorization schemes', async () => {
     const req = {
       headers: { authorization: 'Basic abc' },
       log: { warn: jest.fn() }
     };
 
-    expect(() =>
+    await expect(
       clerkAuthMiddleware(req as unknown as FastifyRequest, {} as FastifyReply)
-    ).toThrow(UnauthorizedError);
+    ).rejects.toThrow(UnauthorizedError);
   });
 
   it('attaches the Clerk user id on success', async () => {
@@ -48,6 +48,7 @@ describe('clerkAuthMiddleware', () => {
         id: 'clerk-user-1'
       }
     };
+
     mockedVerifyClerkSessionToken.mockResolvedValue({
       clerkUserId: 'clerk-user-1',
       sessionId: 'sess_1',
@@ -70,11 +71,19 @@ describe('clerkAuthMiddleware', () => {
       url: '/api/v1/posts',
       log: { warn: jest.fn() }
     };
+
     mockedVerifyClerkSessionToken.mockRejectedValue(new Error('bad token'));
 
     await expect(
       clerkAuthMiddleware(req as unknown as FastifyRequest, {} as FastifyReply)
     ).rejects.toBeInstanceOf(UnauthorizedError);
-    expect(req.log.warn).toHaveBeenCalled();
+
+    expect(req.log.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'bad token',
+        path: '/api/v1/posts'
+      }),
+      '[Auth] Bearer token verification failed'
+    );
   });
 });
