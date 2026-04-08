@@ -32,7 +32,7 @@ export function FacebookConnectCallback() {
   const completeConnection = useEffectEvent(
     async (authorizationCode: string) => {
       try {
-        const token = await getToken();
+        const token = await getToken({ template: 'backend' });
 
         await apiRequest('/auth/session', {
           token
