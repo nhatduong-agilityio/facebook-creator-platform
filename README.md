@@ -1,110 +1,159 @@
 # Facebook Creator Platform
 
-Backend-focused SaaS practice project for managing Facebook content, scheduling posts, collecting analytics, and enforcing Free / Pro subscriptions.
+A backend-focused SaaS practice monorepo for managing Facebook content, scheduling posts, collecting analytics, and enforcing Free/Pro subscriptions.
 
-## Stack
+Built with **TypeScript 5**, **Fastify 5**, **PostgreSQL** via **TypeORM**, validated by **Zod** — managed by **pnpm**.
 
-- Monorepo: `pnpm` workspace
-- API: Node.js, TypeScript, Fastify, TypeORM, PostgreSQL
-- Jobs: BullMQ + Redis
-- Auth: Clerk
-- Billing: Stripe Checkout + webhooks
-- Web: Next.js + React + Tailwind CSS
+---
 
-## Workspace
+## Table of Contents
 
-- `apps/api`: Fastify API, database entities, migrations, jobs, workers
-- `apps/web`: Product-facing Next.js app shell
+- [Facebook Creator Platform](#facebook-creator-platform)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Project Structure](#project-structure)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+  - [Environment Variables](#environment-variables)
+  - [API Reference](#api-reference)
+  - [Architecture \& Design](#architecture--design)
+  - [Code Quality](#code-quality)
 
-## API Modules
+---
 
-- `auth`: sync Clerk users into the local database
-- `facebook`: build connect URL, exchange code, store page tokens
-- `posts`: CRUD, manual publish, schedule publishing jobs
-- `analytics`: overview metrics and post-level performance snapshots
-- `billing`: plan lookup, Stripe Checkout session, webhook sync
-- `jobs`: BullMQ queues, processors, and workers for publishing and metrics
+## Features
 
-## Core Data Model
+| App / Area              | Description |
+| ----------------------- | ----------- |
+| `apps/api`              | Fastify REST API + Swagger UI, TypeORM (PostgreSQL), Zod validation |
+| `apps/api` (jobs)       | Background workers using BullMQ + Redis |
+| Authentication          | Clerk-based auth (JWT bearer token accepted by API) |
+| Billing                 | Stripe Checkout + webhooks |
+| Facebook integration    | OAuth connect + basic account/page token storage |
+| `apps/web`              | Next.js frontend (Tailwind), acts as OAuth callback surface |
 
-- `users`
-- `facebook_accounts`
-- `posts`
-- `post_metrics`
-- `plans`
-- `subscriptions`
-- `audit_logs`
+---
 
-## Quick Start
+## Project Structure
 
-1. Install dependencies:
+```text
+nodejs-training/
+├── apps/
+│   ├── api/                      # Fastify API + jobs + TypeORM (Postgres)
+│   │   ├── src/
+│   │   │   ├── main.ts           # API entry point
+│   │   │   ├── worker.ts         # Worker entry point (BullMQ)
+│   │   │   ├── app.ts            # Fastify app builder + route registration
+│   │   │   ├── modules/          # auth, facebook, posts, analytics, billing, ...
+│   │   │   └── shared/           # shared errors/types/helpers
+│   │   ├── docker-compose.yml    # Postgres + Redis (dev)
+│   │   └── .env.example
+│   │
+│   └── web/                      # Next.js frontend (App Router)
+│       ├── app/                  # routes (marketing/auth/dashboard)
+│       ├── features/             # feature-first UI (dashboard, facebook)
+│       ├── components/           # UI primitives + layout shells + providers
+│       └── .env.example
+│
+├── package.json                  # Workspace scripts (dev:* / build / lint / format)
+├── pnpm-workspace.yaml           # pnpm workspace config (apps/*, packages/*)
+├── commitlint.config.js          # Conventional Commits enforcement
+├── .husky/                       # git hooks (pre-commit, commit-msg)
+└── README.md                     # you are here
+```
+
+See app-level READMEs:
+
+- `apps/api/README.md`
+- `apps/web/README.md`
+
+---
+
+## Requirements
+
+| Tool    | Version |
+| ------- | ------- |
+| Node.js | ≥ 20    |
+| pnpm    | ≥ 8     |
+
+---
+
+## Installation
 
 ```bash
+# Install dependencies
 pnpm install
-```
 
-2. Copy the API environment file:
-
-```bash
+# API env
 cp apps/api/.env.example apps/api/.env
-```
 
-3. Copy the web environment file:
-
-```bash
+# Web env
 cp apps/web/.env.example apps/web/.env.local
-```
 
-4. Start infrastructure:
-
-```bash
+# Start infra (Postgres + Redis)
 pnpm --dir apps/api docker compose up -d
-```
 
-5. Run migrations:
-
-```bash
+# Run migrations
 pnpm --filter api migration:run
-```
 
-6. Start the apps:
-
-```bash
+# Start apps (3 terminals recommended)
 pnpm dev:api
 pnpm dev:worker
 pnpm dev:web
 ```
 
-## Useful Commands
+---
 
-```bash
-pnpm lint
-pnpm test
-pnpm build
-pnpm --filter api migration:generate --name=YourMigrationName
-pnpm --filter api migration:run
-pnpm --filter api migration:revert
-```
+## Environment Variables
 
-## API Prefix
+This monorepo keeps env files per app:
+
+- API: `apps/api/.env` (see `apps/api/.env.example`)
+- Web: `apps/web/.env.local` (see `apps/web/.env.example`)
+
+---
+
+## API Reference
 
 All API routes are served under `/api/v1`.
 
-Main groups:
+Main route groups:
 
-- `/auth`
-- `/facebook`
-- `/posts`
-- `/analytics`
-- `/billing`
+- `/api/v1/auth`
+- `/api/v1/facebook`
+- `/api/v1/posts`
+- `/api/v1/analytics`
+- `/api/v1/comments`
+- `/api/v1/billing`
 
-Swagger UI is available at `/docs`.
+Docs:
 
-## Notes
+- Swagger UI: `http://localhost:3000/docs`
+- Health: `http://localhost:3000/health`
 
-- Redis is used for BullMQ only, not as an API cache.
-- Plan enforcement stays basic for MVP:
-  free users are limited by total posts and scheduled posts, while Pro is unlimited.
-- Facebook and Stripe integrations are intentionally minimal and focused on the MVP flow.
-- The web app runs on `http://localhost:3001` and acts as the Facebook OAuth callback surface.
-- Set `FACEBOOK_REDIRECT_URI=http://localhost:3001/facebook/connect` in the API env.
+---
+
+## Architecture & Design
+
+The API follows a modular structure (controllers/services/repositories/providers) wired in `apps/api/src/app.ts` and started from `apps/api/src/main.ts`.
+
+Notes:
+
+- Redis is used for BullMQ jobs only (not as an API cache).
+- The web app runs on `http://localhost:3001` and is used as the Facebook OAuth callback surface.
+- Set `FACEBOOK_REDIRECT_URI=http://localhost:3001/facebook/connect` in the API env for local OAuth.
+
+---
+
+## Code Quality
+
+Workspace commands:
+
+```bash
+pnpm lint
+pnpm format
+pnpm format:check
+pnpm build
+pnpm test
+pnpm test:e2e
+```
