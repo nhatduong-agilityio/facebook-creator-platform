@@ -16,9 +16,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:e2e": "jest --config jest.e2e.config.ts",
-    "migration:generate": "typeorm-ts-node-commonjs migration:generate src/migrations/$npm_config_name -d src/config/database.ts",
-    "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/database.ts",
-    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.ts"
+    "migration:generate": "ts-node --project tsconfig.json ./node_modules/typeorm/cli.js migration:generate -d src/config/database.ts",
+    "migration:run": "ts-node --project tsconfig.json ./node_modules/typeorm/cli.js migration:run -d src/config/database.ts",
+    "migration:revert": "ts-node --project tsconfig.json ./node_modules/typeorm/cli.js migration:revert -d src/config/database.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

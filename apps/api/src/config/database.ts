@@ -66,6 +66,8 @@ export function createDataSource(): DataSource {
   });
 }
 
+const appDataSource = createDataSource();
+
 /**
  * Initializes the database connection.
  * Call once at application startup before registering routes.
@@ -73,12 +75,13 @@ export function createDataSource(): DataSource {
  * @returns A promise resolving to the initialized DataSource.
  */
 export async function initializeDb(): Promise<DataSource> {
-  const dataSource = createDataSource();
-  await dataSource.initialize();
-  console.info(
-    `[DB] PostgreSQL connected → ${dataSource.options.database as string}`
-  );
-  return dataSource;
+  if (!appDataSource.isInitialized) {
+    await appDataSource.initialize();
+    console.info(
+      `[DB] PostgreSQL connected → ${String(appDataSource.options.database)}`
+    );
+  }
+  return appDataSource;
 }
 
 /**
@@ -93,3 +96,5 @@ export async function closeDb(dataSource?: DataSource): Promise<void> {
     console.info('[DB] Connection closed.');
   }
 }
+
+export default appDataSource;
