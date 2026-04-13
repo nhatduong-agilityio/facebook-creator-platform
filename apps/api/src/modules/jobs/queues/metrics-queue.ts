@@ -4,6 +4,7 @@ import { Queue } from 'bullmq';
 export type FetchMetricsJobData = {
   userId?: string;
   postId?: string;
+  refreshAll?: boolean;
 };
 
 let metricsQueue: Queue<FetchMetricsJobData> | null = null;
@@ -39,7 +40,9 @@ export async function enqueueMetricsJob(
     ? `post-${data.postId}`
     : data.userId
       ? `user-${data.userId}`
-      : `all:${Date.now()}`;
+      : data.refreshAll
+        ? 'all:periodic'
+        : `all:${Date.now()}`;
   const queue = getMetricsQueue();
   const existingJob = await queue.getJob(jobId);
 
@@ -52,4 +55,30 @@ export async function enqueueMetricsJob(
     removeOnComplete: 100,
     removeOnFail: 100
   });
+}
+
+export async function ensurePeriodicMetricsRefreshJob(
+  intervalMinutes = Number(process.env.METRICS_REFRESH_INTERVAL_MINUTES ?? '15')
+): Promise<boolean> {
+  if (!Number.isFinite(intervalMinutes) || intervalMinutes <= 0) {
+    return false;
+  }
+
+  const intervalMs = Math.round(intervalMinutes * 60 * 1000);
+  const queue = getMetricsQueue();
+
+  await queue.add(
+    'fetch_metrics_job',
+    { refreshAll: true },
+    {
+      jobId: 'all:periodic',
+      repeat: {
+        every: intervalMs
+      },
+      removeOnComplete: 100,
+      removeOnFail: 100
+    }
+  );
+
+  return true;
 }

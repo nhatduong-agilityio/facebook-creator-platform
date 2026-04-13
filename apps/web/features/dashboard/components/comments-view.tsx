@@ -19,7 +19,10 @@ import {
   TextAreaControl
 } from '@/components/ui/form-controls';
 import { SegmentedControl } from '@/components/ui/segmented-control';
-import { useReplyToCommentsMutation } from '@/features/dashboard/hooks/use-dashboard-mutations';
+import {
+  useRefreshAnalyticsMutation,
+  useReplyToCommentsMutation
+} from '@/features/dashboard/hooks/use-dashboard-mutations';
 import {
   useDashboardAnalyticsPostsQuery,
   useDashboardPostsQuery
@@ -54,6 +57,7 @@ export function CommentsView() {
   const postsQuery = useDashboardPostsQuery();
   const analyticsPostsQuery = useDashboardAnalyticsPostsQuery();
   const replyMutation = useReplyToCommentsMutation();
+  const refreshAnalyticsMutation = useRefreshAnalyticsMutation();
 
   const inboxItems = buildCommentInbox(
     analyticsPostsQuery.data ?? [],
@@ -114,7 +118,27 @@ export function CommentsView() {
             <GlassTag tone="neutral">Inbox</GlassTag>
           </>
         }
+        actions={
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              void refreshAnalyticsMutation.mutateAsync();
+            }}
+            disabled={refreshAnalyticsMutation.isPending}
+          >
+            {refreshAnalyticsMutation.isPending
+              ? 'Refreshing...'
+              : 'Refresh metrics'}
+          </Button>
+        }
       />
+
+      <Card className={`${subtlePanelClassName} px-4 py-3 text-sm shadow-none`}>
+        Comment activity is derived from the latest post metrics. Published
+        posts queue a background refresh automatically, and you can run manual
+        refresh here whenever new Facebook activity should appear.
+      </Card>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

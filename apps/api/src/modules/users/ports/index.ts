@@ -10,6 +10,7 @@ export interface UserLookupPort {
   findById(id: string): Promise<UserEntity | null>;
   findByClerkId(clerkUserId: string): Promise<UserEntity | null>;
   findByEmail(email: string): Promise<UserEntity | null>;
+  listAllClerkIds(): Promise<string[]>;
 }
 
 export interface UserClerkSyncPort extends UserLookupPort {

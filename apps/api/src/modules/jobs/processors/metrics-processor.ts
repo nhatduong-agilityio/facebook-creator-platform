@@ -23,5 +23,9 @@ export class MetricsProcessor {
       await this.analyticsService.refreshUserMetrics(job.data.userId);
       return;
     }
+
+    if (job.data.refreshAll) {
+      await this.analyticsService.refreshAllMetrics();
+    }
   }
 }

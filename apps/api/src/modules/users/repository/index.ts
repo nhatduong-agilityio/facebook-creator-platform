@@ -45,6 +45,15 @@ export class UserRepository
     });
   }
 
+  async listAllClerkIds(): Promise<string[]> {
+    const rows = await this.repo.find({
+      select: ['clerkUserId'],
+      order: { createdAt: 'ASC' }
+    });
+
+    return rows.map(row => row.clerkUserId);
+  }
+
   async findByStripeCustomerId(
     stripeCustomerId: string
   ): Promise<UserEntity | null> {

@@ -119,4 +119,23 @@ describe('AnalyticsController e2e', () => {
       })
     );
   });
+
+  it('refreshes analytics metrics on demand', async () => {
+    analyticsService.refreshUserMetrics.mockResolvedValue(2);
+
+    const response = await request(app.server).post(
+      '/api/v1/analytics/refresh'
+    );
+
+    expect(response.status).toBe(200);
+    expect(analyticsService.refreshUserMetrics.mock.calls).toEqual([
+      ['clerk-user-1']
+    ]);
+    expect(response.body).toEqual({
+      success: true,
+      data: {
+        refreshedPosts: 2
+      }
+    });
+  });
 });

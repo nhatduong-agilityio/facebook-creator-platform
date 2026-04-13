@@ -46,6 +46,12 @@ export class AnalyticsController extends BaseController {
       { preHandler: protectedHandlers },
       this.posts.bind(this)
     );
+
+    fastify.post(
+      '/refresh',
+      { preHandler: protectedHandlers },
+      this.refresh.bind(this)
+    );
   }
 
   /**
@@ -82,6 +88,22 @@ export class AnalyticsController extends BaseController {
     return reply.send({
       success: true,
       data: posts
+    });
+  }
+
+  private async refresh(
+    req: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<void> {
+    const refreshedPosts = await this.analyticsService.refreshUserMetrics(
+      req.user.id
+    );
+
+    return reply.send({
+      success: true,
+      data: {
+        refreshedPosts
+      }
     });
   }
 }

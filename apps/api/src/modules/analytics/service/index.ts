@@ -171,6 +171,17 @@ export class AnalyticsService
     return publishedPosts.length;
   }
 
+  async refreshAllMetrics(): Promise<number> {
+    const clerkUserIds = await this.userRepo.listAllClerkIds();
+    let refreshedPosts = 0;
+
+    for (const clerkUserId of clerkUserIds) {
+      refreshedPosts += await this.refreshUserMetrics(clerkUserId);
+    }
+
+    return refreshedPosts;
+  }
+
   private async getPostsWithFreshMetrics(user: UserEntity): Promise<{
     posts: PostEntity[];
     latestMetrics: Map<string, PostMetricEntity>;
