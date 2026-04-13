@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   AreaTrendChart,
@@ -26,6 +27,7 @@ import {
   useDashboardAnalyticsPostsQuery,
   useDashboardPostsQuery
 } from '@/features/dashboard/hooks/use-dashboard-queries';
+import { useRefreshAnalyticsMutation } from '@/features/dashboard/hooks/use-dashboard-mutations';
 import {
   buildEngagementMix,
   buildPerformanceSeries,
@@ -44,6 +46,7 @@ export function AnalyticsView() {
   const overviewQuery = useDashboardAnalyticsOverviewQuery();
   const postsQuery = useDashboardAnalyticsPostsQuery();
   const contentPostsQuery = useDashboardPostsQuery();
+  const refreshAnalyticsMutation = useRefreshAnalyticsMutation();
 
   const trendSeries = buildPerformanceSeries(
     postsQuery.data ?? [],
@@ -82,23 +85,43 @@ export function AnalyticsView() {
           </>
         }
         actions={
-          <SegmentedControl
-            legend="Analytics range"
-            options={[
-              { label: '7D', value: '7' },
-              { label: '30D', value: '30' }
-            ]}
-            value={String(range) as '7' | '30'}
-            onChange={nextValue => {
-              setRange(nextValue === '7' ? 7 : 30);
-            }}
-            containerClassName="flex rounded-lg border border-border bg-muted p-1"
-            itemClassName="inline-flex rounded-md px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
-            activeClassName="bg-primary text-primary-foreground shadow-sm"
-            inactiveClassName="text-muted-foreground hover:text-foreground"
-          />
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                void refreshAnalyticsMutation.mutateAsync();
+              }}
+              disabled={refreshAnalyticsMutation.isPending}
+            >
+              {refreshAnalyticsMutation.isPending
+                ? 'Refreshing...'
+                : 'Refresh metrics'}
+            </Button>
+            <SegmentedControl
+              legend="Analytics range"
+              options={[
+                { label: '7D', value: '7' },
+                { label: '30D', value: '30' }
+              ]}
+              value={String(range) as '7' | '30'}
+              onChange={nextValue => {
+                setRange(nextValue === '7' ? 7 : 30);
+              }}
+              containerClassName="flex rounded-lg border border-border bg-muted p-1"
+              itemClassName="inline-flex rounded-md px-3 py-2 text-sm font-medium transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
+              activeClassName="bg-primary text-primary-foreground shadow-sm"
+              inactiveClassName="text-muted-foreground hover:text-foreground"
+            />
+          </>
         }
       />
+
+      <Card className={`${subtlePanelClassName} px-4 py-3 text-sm shadow-none`}>
+        Metrics refresh follows a predictable policy: published posts queue a
+        background sync automatically after publish, and this screen also lets
+        you trigger a manual refresh whenever you need the latest counters.
+      </Card>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

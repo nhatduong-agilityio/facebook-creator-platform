@@ -29,6 +29,17 @@ async function invalidateDashboardQueries(queryClient: QueryClient) {
   ]);
 }
 
+async function invalidateAnalyticsQueries(queryClient: QueryClient) {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: dashboardQueryKeys.analyticsOverview
+    }),
+    queryClient.invalidateQueries({
+      queryKey: dashboardQueryKeys.analyticsPosts
+    })
+  ]);
+}
+
 export function useCheckoutMutation() {
   const { request } = useApiClient();
   const toast = useToast();
@@ -56,6 +67,39 @@ export function useCheckoutMutation() {
       toast.error(
         'Unable to start checkout',
         getErrorMessage(error, 'The billing checkout session could not start.')
+      );
+    }
+  });
+}
+
+export function useRefreshAnalyticsMutation() {
+  const queryClient = useQueryClient();
+  const { request } = useApiClient();
+  const toast = useToast();
+
+  return useMutation({
+    mutationFn: async () =>
+      await request<{ refreshedPosts: number }>('/analytics/refresh', {
+        method: 'POST'
+      }),
+    onSuccess: async result => {
+      await invalidateAnalyticsQueries(queryClient);
+      toast.success(
+        'Metrics refreshed',
+        result.refreshedPosts > 0
+          ? `${result.refreshedPosts} published post${
+              result.refreshedPosts === 1 ? '' : 's'
+            } were refreshed just now.`
+          : 'No published posts were available for refresh.'
+      );
+    },
+    onError: error => {
+      toast.error(
+        'Unable to refresh metrics',
+        getErrorMessage(
+          error,
+          'The latest Facebook metrics could not be refreshed.'
+        )
       );
     }
   });

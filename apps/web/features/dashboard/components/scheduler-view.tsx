@@ -11,12 +11,14 @@ import {
   PageHeader,
   SectionHeading,
   StatusBadge,
+  dangerPanelClassName,
   subtlePanelClassName
 } from '@/components/ui/dashboard-primitives';
 import { InputControl } from '@/components/ui/form-controls';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useSchedulePostMutation } from '@/features/dashboard/hooks/use-dashboard-mutations';
 import {
+  useDashboardBillingQuery,
   useDashboardAccountsQuery,
   useDashboardPostsQuery
 } from '@/features/dashboard/hooks/use-dashboard-queries';
@@ -62,6 +64,7 @@ export function SchedulerView() {
 
   const postsQuery = useDashboardPostsQuery();
   const accountsQuery = useDashboardAccountsQuery();
+  const billingQuery = useDashboardBillingQuery();
   const scheduleMutation = useSchedulePostMutation();
 
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -83,12 +86,20 @@ export function SchedulerView() {
     statusSummary.find(item => item.status === 'scheduled')?.value ?? 0;
   const publishedCount =
     statusSummary.find(item => item.status === 'published')?.value ?? 0;
+  const queueLimit = billingQuery.data?.plan.scheduledLimit ?? 0;
+  const remainingQueueSlots =
+    queueLimit > 0 ? Math.max(queueLimit - scheduledCount, 0) : null;
+  const isQueueFull = queueLimit > 0 && scheduledCount >= queueLimit;
   const periodLabel = new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric'
   }).format(anchorDate);
 
   async function scheduleToDate(postId: string, date: Date) {
+    if (isQueueFull) {
+      return;
+    }
+
     const [hours, minutes] = quickTime.split(':');
     const nextDate = new Date(date);
     nextDate.setHours(Number(hours), Number(minutes), 0, 0);
@@ -111,6 +122,13 @@ export function SchedulerView() {
             </GlassTag>
             <GlassTag tone="neutral">
               Timezone {timezone.replace('_', ' ')}
+            </GlassTag>
+            <GlassTag tone={isQueueFull ? 'warning' : 'neutral'}>
+              {queueLimit > 0
+                ? `${remainingQueueSlots ?? 0} slot${
+                    remainingQueueSlots === 1 ? '' : 's'
+                  } left`
+                : 'Queue open'}
             </GlassTag>
             <GlassTag tone="neutral">
               {mode === 'week' ? 'Week view' : 'Month view'}
@@ -264,7 +282,7 @@ export function SchedulerView() {
 
                       {column.slots.length === 0 ? (
                         <Card className="border-dashed border-[var(--line-strong)] px-3 py-5 text-center text-sm text-muted-foreground shadow-none">
-                          Drop here
+                          {isQueueFull ? 'Queue full' : 'Drop here'}
                         </Card>
                       ) : null}
                     </div>
@@ -334,14 +352,51 @@ export function SchedulerView() {
           <SectionHeading eyebrow="Queue" title="Ready to schedule" />
 
           <div className="mt-6 space-y-3">
+            <Card className={`${subtlePanelClassName} p-4 shadow-none`}>
+              <p className="font-semibold">Active queue capacity</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {queueLimit > 0
+                  ? `${scheduledCount} of ${queueLimit} active scheduled slot${
+                      queueLimit === 1 ? '' : 's'
+                    } are currently in use.`
+                  : 'Your current plan does not cap active scheduled posts.'}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {queueLimit > 0
+                  ? isQueueFull
+                    ? 'The queue is full, so draft cards cannot be dropped onto the calendar until a slot opens.'
+                    : `${remainingQueueSlots} slot${
+                        remainingQueueSlots === 1 ? '' : 's'
+                      } remain before the queue becomes full.`
+                  : 'As soon as a scheduled post is published, it leaves the active queue automatically.'}
+              </p>
+            </Card>
+
+            {isQueueFull ? (
+              <Card
+                className={`${dangerPanelClassName} px-4 py-3 text-sm shadow-none`}
+              >
+                Scheduled queue limit reached. Move forward only after one of
+                the active scheduled posts is published or removed.
+              </Card>
+            ) : null}
+
             {draftPosts.map(post => (
               <Card
                 key={post.id}
-                draggable
+                draggable={!isQueueFull}
                 onDragStart={() => {
+                  if (isQueueFull) {
+                    return;
+                  }
+
                   setDraggedPostId(post.id);
                 }}
-                className={`${subtlePanelClassName} cursor-grab p-4 shadow-none active:cursor-grabbing`}
+                className={`${subtlePanelClassName} p-4 shadow-none ${
+                  isQueueFull
+                    ? 'cursor-not-allowed opacity-70'
+                    : 'cursor-grab active:cursor-grabbing'
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -361,6 +416,11 @@ export function SchedulerView() {
                     ? `Scheduled ${formatDate(post.scheduledAt)}`
                     : 'Draft'}
                 </p>
+                {isQueueFull ? (
+                  <p className="mt-2 text-xs text-destructive">
+                    Queue full. This draft cannot be scheduled right now.
+                  </p>
+                ) : null}
               </Card>
             ))}
 

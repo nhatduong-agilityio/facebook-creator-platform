@@ -20,4 +20,5 @@ export interface AnalyticsServicePort {
   getPostAnalytics(userId: string): Promise<AnalyticsPostDto[]>;
   refreshPostMetrics(postId: string): Promise<void>;
   refreshUserMetrics(userId: string): Promise<number>;
+  refreshAllMetrics(): Promise<number>;
 }

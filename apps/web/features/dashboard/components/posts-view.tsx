@@ -63,7 +63,10 @@ import {
   getStatusTone,
   toDateTimeLocalValue
 } from '@/features/dashboard/lib/format';
-import type { MediaUploadPayload } from '@/features/dashboard/types';
+import type {
+  MediaUploadPayload,
+  PostRecord
+} from '@/features/dashboard/types';
 
 type PostFilter = 'all' | 'draft' | 'scheduled' | 'published' | 'failed';
 type MediaSource = 'url' | 'upload';
@@ -202,6 +205,35 @@ export function PostsView() {
   const draftCount =
     statusSummary.find(item => item.status === 'draft')?.value ?? 0;
   const queueLimit = billingQuery.data?.plan.scheduledLimit ?? 0;
+  const postLimit = billingQuery.data?.plan.postLimit ?? 0;
+  const totalPosts = postsQuery.data?.length ?? 0;
+  const remainingQueueSlots =
+    queueLimit > 0 ? Math.max(queueLimit - scheduledCount, 0) : null;
+  const remainingPostSlots =
+    postLimit > 0 ? Math.max(postLimit - totalPosts, 0) : null;
+  const isCreateLimitReached =
+    !editingPost && postLimit > 0 && totalPosts >= postLimit;
+  const scheduledCountExcludingEditing =
+    editingPost?.status === 'scheduled'
+      ? Math.max(scheduledCount - 1, 0)
+      : scheduledCount;
+  const isQueueLimitReachedForComposer =
+    Boolean(newScheduleAt) &&
+    queueLimit > 0 &&
+    scheduledCountExcludingEditing >= queueLimit;
+
+  function canSchedulePost(post: PostRecord) {
+    if (queueLimit <= 0) {
+      return true;
+    }
+
+    const queuedWithoutCurrent =
+      post.status === 'scheduled'
+        ? Math.max(scheduledCount - 1, 0)
+        : scheduledCount;
+
+    return queuedWithoutCurrent < queueLimit;
+  }
 
   return (
     <>
@@ -217,6 +249,20 @@ export function PostsView() {
             <GlassTag tone="neutral">
               {accountsQuery.data?.length ?? 0} page
               {(accountsQuery.data?.length ?? 0) === 1 ? '' : 's'}
+            </GlassTag>
+            <GlassTag tone="neutral">
+              {postLimit > 0
+                ? `${remainingPostSlots ?? 0} content slot${
+                    remainingPostSlots === 1 ? '' : 's'
+                  } left`
+                : 'Content open'}
+            </GlassTag>
+            <GlassTag tone="neutral">
+              {queueLimit > 0
+                ? `${remainingQueueSlots ?? 0} schedule slot${
+                    remainingQueueSlots === 1 ? '' : 's'
+                  } left`
+                : 'Queue open'}
             </GlassTag>
             <GlassTag tone="neutral">
               Timezone {timezone.replace('_', ' ')}
@@ -457,10 +503,51 @@ export function PostsView() {
             </Card>
 
             <div className="flex flex-wrap gap-3">
+              {isCreateLimitReached ? (
+                <Card
+                  className={`${dangerPanelClassName} w-full px-4 py-3 text-sm shadow-none`}
+                >
+                  Post limit reached. Delete an existing item or upgrade before
+                  creating another draft.
+                </Card>
+              ) : null}
+
+              {!isCreateLimitReached && postLimit > 0 ? (
+                <Card
+                  className={`${subtlePanelClassName} w-full px-4 py-3 text-sm text-muted-foreground shadow-none`}
+                >
+                  {remainingPostSlots} of {postLimit} content slot
+                  {postLimit === 1 ? '' : 's'} remain on the current plan.
+                </Card>
+              ) : null}
+
+              {newScheduleAt && isQueueLimitReachedForComposer ? (
+                <Card
+                  className={`${dangerPanelClassName} w-full px-4 py-3 text-sm shadow-none`}
+                >
+                  Scheduled queue is full. Clear an active scheduled post or
+                  upgrade before assigning another publish time.
+                </Card>
+              ) : null}
+
+              {newScheduleAt &&
+              !isQueueLimitReachedForComposer &&
+              queueLimit > 0 ? (
+                <Card
+                  className={`${subtlePanelClassName} w-full px-4 py-3 text-sm text-muted-foreground shadow-none`}
+                >
+                  Saving this schedule will use 1 of the {queueLimit} active
+                  scheduled slot{queueLimit === 1 ? '' : 's'}.
+                </Card>
+              ) : null}
+
               <Button
                 type="submit"
                 disabled={
-                  savePostMutation.isPending || schedulePostMutation.isPending
+                  savePostMutation.isPending ||
+                  schedulePostMutation.isPending ||
+                  isCreateLimitReached ||
+                  isQueueLimitReachedForComposer
                 }
               >
                 {editingPost ? 'Save changes' : 'Create post'}
@@ -564,7 +651,11 @@ export function PostsView() {
                   </span>
                 </p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Scheduled posts against the current plan allowance.
+                  {queueLimit > 0
+                    ? `${remainingQueueSlots} active scheduling slot${
+                        remainingQueueSlots === 1 ? '' : 's'
+                      } remain before the queue is full.`
+                    : 'Your current plan does not cap active scheduled posts.'}
                 </p>
               </Card>
 
@@ -651,6 +742,7 @@ export function PostsView() {
             const scheduleValue =
               scheduleValues[post.id] ?? toDateTimeLocalValue(post.scheduledAt);
             const displayTitle = getPostDisplayTitle(post.title, post.content);
+            const scheduleAvailable = canSchedulePost(post);
 
             return (
               <Card
@@ -759,12 +851,20 @@ export function PostsView() {
                         }}
                         disabled={
                           schedulePostMutation.isPending ||
-                          post.status === 'published'
+                          post.status === 'published' ||
+                          !scheduleValue ||
+                          !scheduleAvailable
                         }
                       >
                         Save time
                       </Button>
                     </div>
+                    {!scheduleAvailable ? (
+                      <p className="text-xs text-destructive">
+                        Schedule limit reached. This draft cannot be added to
+                        the queue until a slot opens.
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="grid gap-2 sm:grid-cols-2">

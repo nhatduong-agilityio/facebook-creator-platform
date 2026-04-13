@@ -21,6 +21,7 @@ import { getRedisConnection } from '@/config/redis';
 import type { DataSource } from 'typeorm';
 import type { PublishPostJobData } from '../queues/publish-post-queue';
 import type { FetchMetricsJobData } from '../queues/metrics-queue';
+import { ensurePeriodicMetricsRefreshJob } from '../queues/metrics-queue';
 
 export function startWorkers(dataSource: DataSource): () => Promise<void> {
   const auditLogRepo = new AuditLogRepository(dataSource);
@@ -82,6 +83,18 @@ export function startWorkers(dataSource: DataSource): () => Promise<void> {
     console.error(
       `[Jobs] fetch_metrics_job failed for ${job?.id ?? 'unknown'}: ${error.message}`
     );
+  });
+
+  void ensurePeriodicMetricsRefreshJob().then(enabled => {
+    if (enabled) {
+      console.info(
+        `[Jobs] Periodic metrics refresh scheduled every ${
+          process.env.METRICS_REFRESH_INTERVAL_MINUTES ?? '15'
+        } minutes`
+      );
+    } else {
+      console.info('[Jobs] Periodic metrics refresh disabled');
+    }
   });
 
   return async () => {

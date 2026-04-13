@@ -142,4 +142,22 @@ describe('AnalyticsService', () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.metrics.likes).toBe(3);
   });
+
+  it('refreshes metrics for all users on periodic sync', async () => {
+    userRepo.listAllClerkIds.mockResolvedValue([
+      'clerk-user-1',
+      'clerk-user-2'
+    ]);
+    const refreshSpy = jest
+      .spyOn(service, 'refreshUserMetrics')
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(1);
+
+    const refreshedPosts = await service.refreshAllMetrics();
+
+    expect(refreshSpy).toHaveBeenCalledTimes(2);
+    expect(refreshSpy).toHaveBeenNthCalledWith(1, 'clerk-user-1');
+    expect(refreshSpy).toHaveBeenNthCalledWith(2, 'clerk-user-2');
+    expect(refreshedPosts).toBe(3);
+  });
 });
