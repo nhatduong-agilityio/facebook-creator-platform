@@ -1,0 +1,176 @@
+name: Deploy
+
+on:
+  pull_request:
+    branches: [dev, staging, main]
+  push:
+    branches: [dev, staging, main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      github-environment: ${{ steps.plan.outputs.github-environment }}
+      vercel-environment: ${{ steps.plan.outputs.vercel-environment }}
+      docker-channel: ${{ steps.plan.outputs.docker-channel }}
+      should-deploy-vercel: ${{ steps.plan.outputs.should-deploy-vercel }}
+      internal-pr: ${{ steps.plan.outputs.internal-pr }}
+      api-image-tags: ${{ steps.plan.outputs.api-image-tags }}
+    steps:
+      - name: Resolve deployment target
+        id: plan
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET="${{ github.event.inputs.target }}"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            TARGET="${{ github.base_ref }}"
+          else
+            TARGET="${{ github.ref_name }}"
+          fi
+
+          case "$TARGET" in
+            dev)
+              GITHUB_ENVIRONMENT="dev"
+              VERCEL_ENVIRONMENT="dev"
+              DOCKER_CHANNEL="dev"
+              ;;
+            staging)
+              GITHUB_ENVIRONMENT="staging"
+              VERCEL_ENVIRONMENT="staging"
+              DOCKER_CHANNEL="staging"
+              ;;
+            main)
+              GITHUB_ENVIRONMENT="production"
+              VERCEL_ENVIRONMENT="production"
+              DOCKER_CHANNEL="production"
+              ;;
+            *)
+              echo "Unsupported target branch: $TARGET"
+              exit 1
+              ;;
+          esac
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SHOULD_PUSH_IMAGES="false"
+            SHOULD_DEPLOY_VERCEL="false"
+          else
+            SHOULD_PUSH_IMAGES="true"
+            SHOULD_DEPLOY_VERCEL="true"
+          fi
+
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            INTERNAL_PR="false"
+          else
+            INTERNAL_PR="true"
+          fi
+
+          if [ "$SHOULD_PUSH_IMAGES" = "true" ]; then
+            API_IMAGE_TAGS="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/facebook-creator-platform-api:${DOCKER_CHANNEL}"$'\n'"docker.io/${{ secrets.DOCKERHUB_USERNAME }}/facebook-creator-platform-api:${DOCKER_CHANNEL}-${{ github.sha }}"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            API_IMAGE_TAGS="facebook-creator-platform-api:pr-${{ github.event.pull_request.number }}"$'\n'"facebook-creator-platform-api:pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
+          else
+            API_IMAGE_TAGS="facebook-creator-platform-api:${DOCKER_CHANNEL}"$'\n'"facebook-creator-platform-api:${DOCKER_CHANNEL}-${{ github.sha }}"
+          fi
+
+          {
+            echo "github-environment=$GITHUB_ENVIRONMENT"
+            echo "vercel-environment=$VERCEL_ENVIRONMENT"
+            echo "docker-channel=$DOCKER_CHANNEL"
+            echo "should-push-images=$SHOULD_PUSH_IMAGES"
+            echo "should-deploy-vercel=$SHOULD_DEPLOY_VERCEL"
+            echo "internal-pr=$INTERNAL_PR"
+            echo "api-image-tags<<EOF"
+            echo "$API_IMAGE_TAGS"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+  docker-api:
+    runs-on: ubuntu-latest
+    needs: plan
+    environment: ${{ needs.plan.outputs.github-environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Docker
+        if: needs.plan.outputs.should-push-images == 'true'
+        uses: ./.github/actions/setup-docker
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+      - name: Setup Docker Buildx
+        if: needs.plan.outputs.should-push-images == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/api/Dockerfile
+          push: ${{ needs.plan.outputs.should-push-images == 'true' }}
+          tags: ${{ needs.plan.outputs.api-image-tags }}
+
+  deploy-web:
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.should-deploy-vercel == 'true' && needs.plan.outputs.internal-pr == 'true'
+    environment: ${{ needs.plan.outputs.github-environment }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
+      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Setup Vercel CLI
+        uses: ./.github/actions/setup-vercel
+
+      - name: Pull Vercel project settings
+        working-directory: ./apps/web
+        run: vercel pull --yes --environment=${{ needs.plan.outputs.vercel-environment }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Vercel output
+        working-directory: ./apps/web
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        id: vercel-deploy
+        working-directory: ./apps/web
+        shell: bash
+        run: |
+          if [ "${{ needs.plan.outputs.vercel-environment }}" = "production" ]; then
+            DEPLOYMENT_URL="$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})"
+          else
+            DEPLOYMENT_URL="$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})"
+          fi
+
+          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "### Vercel Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: ${{ needs.plan.outputs.vercel-environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- URL: $DEPLOYMENT_URL" >> $GITHUB_STEP_SUMMARY
