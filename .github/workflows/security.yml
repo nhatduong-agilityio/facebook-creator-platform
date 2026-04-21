@@ -1,0 +1,44 @@
+name: Security
+
+on:
+  pull_request:
+    branches: [dev, staging, main]
+  push:
+    branches: [dev, staging, main]
+  schedule:
+    - cron: "0 2 * * 1" # Run every Monday at 2:00 AM
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          config-file: "./.github/dependency-review-config.yml"
+
+  pnpm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node and pnpm workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high
