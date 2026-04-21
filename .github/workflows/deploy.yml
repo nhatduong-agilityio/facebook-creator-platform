@@ -114,8 +114,8 @@ jobs:
         if: needs.plan.outputs.should-push-images == 'true'
         uses: ./.github/actions/setup-docker
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Setup Docker Buildx
         if: needs.plan.outputs.should-push-images == 'true'
@@ -153,16 +153,13 @@ jobs:
         uses: ./.github/actions/setup-vercel
 
       - name: Pull Vercel project settings
-        working-directory: ./apps/web
         run: vercel pull --yes --environment=${{ needs.plan.outputs.vercel-environment }} --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Vercel output
-        working-directory: ./apps/web
         run: doppler run --command="vercel build --token=${{ secrets.VERCEL_TOKEN }}"
 
       - name: Deploy to Vercel
         id: vercel-deploy
-        working-directory: ./apps/web
         shell: bash
         run: |
           if [ "${{ needs.plan.outputs.vercel-environment }}" = "production" ]; then
