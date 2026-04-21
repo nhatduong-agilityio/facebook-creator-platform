@@ -1,0 +1,18 @@
+name: Setup Doppler CLI
+description: Install the Doppler CLI for managing secrets and environment variables.
+
+inputs:
+  token:
+    description: Doppler API token for authentication
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install CLI
+      uses: dopplerhq/cli-action@v4
+
+    - name: Export Doppler secrets as environment variables
+      shell: bash
+      run: echo "DOPPLER_TOKEN=${{ inputs.token }}" >> $GITHUB_ENV
+      # The Doppler CLI will automatically use the DOPPLER_TOKEN environment variable for authentication
