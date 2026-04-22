@@ -102,53 +102,7 @@ jobs:
             echo "- Channel: ${{ inputs.docker-channel }}"
             echo "- Tags:"
             echo '${{ steps.meta.outputs.tags }}' | sed 's/^/  - /'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  deploy-api-railway:
-    name: Redeploy API on Railway
-    runs-on: ubuntu-latest
-    needs: docker-api
-    environment: ${{ inputs.github-environment }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Validate Railway settings
-        shell: bash
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_SERVICE_API: ${{ secrets.RAILWAY_SERVICE_API }}
-        run: |
-          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$RAILWAY_PROJECT_ID" ] || [ -z "$RAILWAY_SERVICE_API" ]; then
-            echo "Missing Railway deployment secrets in the '${{ inputs.github-environment }}' GitHub Environment."
-            echo "Set RAILWAY_TOKEN, RAILWAY_PROJECT_ID, and RAILWAY_SERVICE_API."
-            exit 1
-          fi
-
-      - name: Setup Railway CLI
-        uses: ./.github/actions/setup-railway
-
-      - name: Redeploy API service
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_SERVICE_API: ${{ secrets.RAILWAY_SERVICE_API }}
-        run: |
-          railway redeploy \
-            --yes \
-            --project "$RAILWAY_PROJECT_ID" \
-            --environment "${{ inputs.railway-environment-name }}" \
-            --service "$RAILWAY_SERVICE_API"
-
-      - name: Summarize Railway deployment
-        shell: bash
-        run: |
-          {
-            echo "### Railway API Deployment"
-            echo "- Environment: ${{ inputs.railway-environment-name }}"
-            echo "- Service: ${{ secrets.RAILWAY_SERVICE_API }}"
-            echo "- Source image: ${{ needs.docker-api.outputs.image-repository }}:${{ inputs.docker-channel }}"
+            echo "- Railway: auto deploys from Docker image tag"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-web:
