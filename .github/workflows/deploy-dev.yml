@@ -1,0 +1,27 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/**"
+      - ".dockerignore"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "apps/api/**"
+      - "apps/web/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-shared.yml
+    with:
+      github-environment: dev
+      vercel-environment: preview
+      docker-channel: dev
+      railway-environment-name: development
+    secrets: inherit

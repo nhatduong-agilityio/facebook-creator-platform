@@ -1,0 +1,49 @@
+name: Deploy All
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - staging
+          - main
+          - all
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-dev:
+    if: ${{ inputs.target == 'dev' || inputs.target == 'all' }}
+    uses: ./.github/workflows/deploy-shared.yml
+    with:
+      github-environment: dev
+      vercel-environment: preview
+      docker-channel: dev
+      railway-environment-name: development
+    secrets: inherit
+
+  deploy-staging:
+    if: ${{ inputs.target == 'staging' || inputs.target == 'all' }}
+    uses: ./.github/workflows/deploy-shared.yml
+    with:
+      github-environment: staging
+      vercel-environment: preview
+      docker-channel: staging
+      railway-environment-name: staging
+    secrets: inherit
+
+  deploy-main:
+    if: ${{ inputs.target == 'main' || inputs.target == 'all' }}
+    uses: ./.github/workflows/deploy-shared.yml
+    with:
+      github-environment: production
+      vercel-environment: production
+      docker-channel: production
+      railway-environment-name: production
+    secrets: inherit
