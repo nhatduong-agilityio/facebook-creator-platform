@@ -110,6 +110,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Setup Doppler CLI
+        uses: ./.github/actions/setup-doppler
+        with:
+          token: ${{ secrets.DOPPLER_TOKEN }}
+
       - name: Setup Docker
         if: needs.plan.outputs.should-push-images == 'true'
         uses: ./.github/actions/setup-docker
