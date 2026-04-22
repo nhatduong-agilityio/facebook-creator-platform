@@ -132,7 +132,13 @@ jobs:
         run: vercel pull --yes --environment=${{ inputs.vercel-environment }} --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Vercel output
-        run: doppler run --command="vercel build --token=${{ secrets.VERCEL_TOKEN }}"
+        shell: bash
+        run: |
+          if [ "${{ inputs.vercel-environment }}" = "production" ]; then
+            doppler run --command="vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}"
+          else
+            doppler run --command="vercel build --token=${{ secrets.VERCEL_TOKEN }}"
+          fi
 
       - name: Deploy to Vercel
         id: vercel-deploy
