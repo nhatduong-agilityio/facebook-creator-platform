@@ -2,6 +2,10 @@
 .github
 .husky
 .pnpm-store
+docs
+apps/web
+apps/api/docker
+apps/api/docker-compose.yml
 node_modules
 **/node_modules
 **/.next
