@@ -84,7 +84,7 @@ jobs:
           fi
 
           if [ "$SHOULD_PUSH_IMAGES" = "true" ]; then
-            API_IMAGE_TAGS="docker.io/${{ secrets.DOCKERHUB_USERNAME }}/facebook-creator-platform-api:${DOCKER_CHANNEL}"$'\n'"docker.io/${{ secrets.DOCKERHUB_USERNAME }}/facebook-creator-platform-api:${DOCKER_CHANNEL}-${{ github.sha }}"
+            API_IMAGE_TAGS="docker.io/${{ secrets.DOCKER_USERNAME }}/facebook-creator-platform-api:${DOCKER_CHANNEL}"$'\n'"docker.io/${{ secrets.DOCKER_USERNAME }}/facebook-creator-platform-api:${DOCKER_CHANNEL}-${{ github.sha }}"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
             API_IMAGE_TAGS="facebook-creator-platform-api:pr-${{ github.event.pull_request.number }}"$'\n'"facebook-creator-platform-api:pr-${{ github.event.pull_request.number }}-${{ github.sha }}"
           else
@@ -110,11 +110,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Doppler CLI
-        uses: ./.github/actions/setup-doppler
-        with:
-          token: ${{ secrets.DOPPLER_TOKEN }}
-
       - name: Setup Docker
         if: needs.plan.outputs.should-push-images == 'true'
         uses: ./.github/actions/setup-docker
@@ -123,7 +118,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Setup Docker Buildx
-        if: needs.plan.outputs.should-push-images == 'true'
+        if: needs.plan.outputs.should-push-images != 'true'
         uses: docker/setup-buildx-action@v4
 
       - name: Build and push API image
