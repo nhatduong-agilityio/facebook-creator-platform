@@ -1,0 +1,268 @@
+name: All-in-One CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deployment target
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - staging
+          - main
+      deploy:
+        description: Also deploy after CI, security, and Docker checks
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: all-in-one-${{ github.ref }}-${{ inputs.target }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    name: Resolve environment
+    runs-on: ubuntu-latest
+    outputs:
+      github-environment: ${{ steps.plan.outputs.github-environment }}
+      vercel-environment: ${{ steps.plan.outputs.vercel-environment }}
+      docker-channel: ${{ steps.plan.outputs.docker-channel }}
+      railway-environment-name: ${{ steps.plan.outputs.railway-environment-name }}
+    steps:
+      - name: Map target to environments
+        id: plan
+        shell: bash
+        run: |
+          case "${{ inputs.target }}" in
+            dev)
+              echo "github-environment=dev" >> "$GITHUB_OUTPUT"
+              echo "vercel-environment=preview" >> "$GITHUB_OUTPUT"
+              echo "docker-channel=dev" >> "$GITHUB_OUTPUT"
+              echo "railway-environment-name=development" >> "$GITHUB_OUTPUT"
+              ;;
+            staging)
+              echo "github-environment=staging" >> "$GITHUB_OUTPUT"
+              echo "vercel-environment=preview" >> "$GITHUB_OUTPUT"
+              echo "docker-channel=staging" >> "$GITHUB_OUTPUT"
+              echo "railway-environment-name=staging" >> "$GITHUB_OUTPUT"
+              ;;
+            main)
+              echo "github-environment=production" >> "$GITHUB_OUTPUT"
+              echo "vercel-environment=production" >> "$GITHUB_OUTPUT"
+              echo "docker-channel=production" >> "$GITHUB_OUTPUT"
+              echo "railway-environment-name=production" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported target: ${{ inputs.target }}"
+              exit 1
+              ;;
+          esac
+
+  quality:
+    name: Code quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node and pnpm workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Run lint and format check
+        run: pnpm format:check && pnpm lint
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node and pnpm workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Run unit tests
+        run: pnpm --filter api test
+
+      - name: Run e2e tests
+        run: pnpm --filter api test:e2e
+
+  build:
+    name: Build apps
+    runs-on: ubuntu-latest
+    needs: [quality, tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node and pnpm workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Build monorepo
+        run: pnpm build
+
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node and pnpm workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high
+
+  docker-validate:
+    name: Validate API Docker image
+    runs-on: ubuntu-latest
+    needs: [quality, tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Validate API Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/api/Dockerfile
+          target: runtime
+          push: false
+          load: false
+
+  deploy:
+    name: Deploy web and backend
+    runs-on: ubuntu-latest
+    needs: [plan, build, security, docker-validate]
+    if: ${{ inputs.deploy }}
+    environment: ${{ needs.plan.outputs.github-environment }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve Docker Hub credentials
+        id: docker-creds
+        shell: bash
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "Missing Docker credentials in GitHub Environment '${{ needs.plan.outputs.github-environment }}'."
+            exit 1
+          fi
+
+          echo "::add-mask::$DOCKERHUB_TOKEN"
+          echo "username=$DOCKER_USERNAME" >> "$GITHUB_OUTPUT"
+          echo "token=$DOCKERHUB_TOKEN" >> "$GITHUB_OUTPUT"
+          echo "repository=docker.io/${DOCKER_USERNAME}/facebook-creator-platform-api" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Docker
+        uses: ./.github/actions/setup-docker
+        with:
+          username: ${{ steps.docker-creds.outputs.username }}
+          password: ${{ steps.docker-creds.outputs.token }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.docker-creds.outputs.repository }}
+          tags: |
+            type=raw,value=${{ needs.plan.outputs.docker-channel }}
+            type=sha,prefix=${{ needs.plan.outputs.docker-channel }}-
+            type=raw,value=latest,enable=${{ needs.plan.outputs.github-environment == 'production' }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/api/Dockerfile
+          target: runtime
+          pull: true
+          push: true
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Setup Railway CLI
+        uses: ./.github/actions/setup-railway
+
+      - name: Redeploy Railway API
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_API: ${{ secrets.RAILWAY_SERVICE_API }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$RAILWAY_PROJECT_ID" ] || [ -z "$RAILWAY_SERVICE_API" ]; then
+            echo "Missing Railway secrets in GitHub Environment '${{ needs.plan.outputs.github-environment }}'."
+            exit 1
+          fi
+
+          railway redeploy \
+            --yes \
+            --project "$RAILWAY_PROJECT_ID" \
+            --environment "${{ needs.plan.outputs.railway-environment-name }}" \
+            --service "$RAILWAY_SERVICE_API"
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Setup Doppler CLI
+        uses: ./.github/actions/setup-doppler
+        with:
+          token: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Setup Vercel CLI
+        uses: ./.github/actions/setup-vercel
+
+      - name: Pull Vercel project settings
+        run: vercel pull --yes --environment=${{ needs.plan.outputs.vercel-environment }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Vercel output
+        shell: bash
+        run: |
+          if [ "${{ needs.plan.outputs.vercel-environment }}" = "production" ]; then
+            doppler run --command="vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}"
+          else
+            doppler run --command="vercel build --token=${{ secrets.VERCEL_TOKEN }}"
+          fi
+
+      - name: Deploy to Vercel
+        id: vercel-deploy
+        shell: bash
+        run: |
+          if [ "${{ needs.plan.outputs.vercel-environment }}" = "production" ]; then
+            DEPLOYMENT_URL="$(vercel deploy --prebuilt --archive=tgz --prod --token=${{ secrets.VERCEL_TOKEN }})"
+          else
+            DEPLOYMENT_URL="$(vercel deploy --prebuilt --archive=tgz --token=${{ secrets.VERCEL_TOKEN }})"
+          fi
+
+          echo "deployment-url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "### All-in-One Deployment"
+            echo "- GitHub Environment: ${{ needs.plan.outputs.github-environment }}"
+            echo "- Docker channel: ${{ needs.plan.outputs.docker-channel }}"
+            echo "- Railway environment: ${{ needs.plan.outputs.railway-environment-name }}"
+            echo "- Vercel environment: ${{ needs.plan.outputs.vercel-environment }}"
+            echo "- Vercel URL: ${{ steps.vercel-deploy.outputs.deployment-url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
