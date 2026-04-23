@@ -1,0 +1,10 @@
+name: Setup Railway CLI
+description: Install the Railway CLI for explicit API redeploys from Docker Hub.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Railway CLI
+      shell: bash
+      run: |
+        npm install -g @railway/cli
