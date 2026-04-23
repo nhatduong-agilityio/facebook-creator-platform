@@ -215,10 +215,8 @@ jobs:
           fi
 
           railway redeploy \
-            --yes \
-            --project "$RAILWAY_PROJECT_ID" \
-            --environment "${{ needs.plan.outputs.railway-environment-name }}" \
-            --service "$RAILWAY_SERVICE_API"
+          --service "$RAILWAY_SERVICE_API" \
+          --yes
 
       - name: Setup workspace
         uses: ./.github/actions/setup-node-pnpm

@@ -136,9 +136,9 @@ jobs:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           RAILWAY_SERVICE_API: ${{ secrets.RAILWAY_SERVICE_API }}
         run: |
-          railway up \
+          railway redeploy \
           --service "$RAILWAY_SERVICE_API" \
-          --detach
+          --yes
 
       - name: Summarize Railway deployment
         shell: bash
