@@ -19,6 +19,16 @@ on:
         description: Railway environment name
         required: true
         type: string
+      deploy-api:
+        description: Build and deploy the API image
+        required: false
+        default: true
+        type: boolean
+      deploy-web:
+        description: Build and deploy the web app
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -30,6 +40,7 @@ concurrency:
 jobs:
   docker-api:
     name: Build and Push API Image
+    if: ${{ inputs.deploy-api }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.github-environment }}
     outputs:
@@ -107,6 +118,7 @@ jobs:
 
   deploy-api-railway:
     name: Redeploy API on Railway
+    if: ${{ inputs.deploy-api }}
     runs-on: ubuntu-latest
     needs: docker-api
     environment: ${{ inputs.github-environment }}
@@ -150,10 +162,67 @@ jobs:
             echo "- Source: Docker Hub image tag '${{ inputs.docker-channel }}'"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  deploy-web:
+  deploy-web-only:
     name: Deploy Web on Vercel
+    if: ${{ inputs.deploy-web && !inputs.deploy-api }}
     runs-on: ubuntu-latest
-    needs: [docker-api, deploy-api-railway]
+    environment: ${{ inputs.github-environment }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Setup Doppler CLI
+        uses: ./.github/actions/setup-doppler
+        with:
+          token: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Setup Vercel CLI
+        uses: ./.github/actions/setup-vercel
+
+      - name: Pull Vercel project settings
+        run: vercel pull --yes --environment=${{ inputs.vercel-environment }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Vercel output
+        shell: bash
+        run: |
+          if [ "${{ inputs.vercel-environment }}" = "production" ]; then
+            doppler run --command="vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}"
+          else
+            doppler run --command="vercel build --token=${{ secrets.VERCEL_TOKEN }}"
+          fi
+
+      - name: Deploy to Vercel
+        id: vercel-deploy
+        shell: bash
+        run: |
+          if [ "${{ inputs.vercel-environment }}" = "production" ]; then
+            DEPLOYMENT_URL="$(vercel deploy --prebuilt --archive=tgz --prod --token=${{ secrets.VERCEL_TOKEN }})"
+          else
+            DEPLOYMENT_URL="$(vercel deploy --prebuilt --archive=tgz --token=${{ secrets.VERCEL_TOKEN }})"
+          fi
+
+          echo "deployment-url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Summarize Vercel deployment
+        shell: bash
+        run: |
+          {
+            echo "### Vercel Deployment"
+            echo "- Environment: ${{ inputs.vercel-environment }}"
+            echo "- URL: ${{ steps.vercel-deploy.outputs.deployment-url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-web-after-api:
+    name: Deploy Web on Vercel
+    if: ${{ inputs.deploy-web && inputs.deploy-api }}
+    runs-on: ubuntu-latest
+    needs: deploy-api-railway
     environment: ${{ inputs.github-environment }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
