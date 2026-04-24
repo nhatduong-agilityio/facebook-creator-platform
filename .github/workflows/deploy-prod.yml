@@ -1,16 +1,6 @@
 name: Deploy Production
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/**"
-      - ".dockerignore"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "apps/api/**"
-      - "apps/web/**"
   workflow_dispatch:
 
 permissions:
@@ -24,4 +14,6 @@ jobs:
       vercel-environment: production
       docker-channel: production
       railway-environment-name: production
+      deploy-api: true
+      deploy-web: true
     secrets: inherit

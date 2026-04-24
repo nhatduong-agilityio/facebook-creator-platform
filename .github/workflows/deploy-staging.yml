@@ -1,16 +1,6 @@
 name: Deploy Staging
 
 on:
-  push:
-    branches: [staging]
-    paths:
-      - ".github/**"
-      - ".dockerignore"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "apps/api/**"
-      - "apps/web/**"
   workflow_dispatch:
 
 permissions:
@@ -24,4 +14,6 @@ jobs:
       vercel-environment: preview
       docker-channel: staging
       railway-environment-name: staging
+      deploy-api: true
+      deploy-web: true
     secrets: inherit

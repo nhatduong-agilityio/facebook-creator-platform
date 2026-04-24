@@ -19,6 +19,16 @@ on:
         description: Railway environment name
         required: true
         type: string
+      deploy-api:
+        description: Build and deploy the API image
+        required: false
+        default: true
+        type: boolean
+      deploy-web:
+        description: Build and deploy the web app
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -30,6 +40,7 @@ concurrency:
 jobs:
   docker-api:
     name: Build and Push API Image
+    if: ${{ inputs.deploy-api }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.github-environment }}
     outputs:
@@ -102,13 +113,116 @@ jobs:
             echo "- Channel: ${{ inputs.docker-channel }}"
             echo "- Tags:"
             echo '${{ steps.meta.outputs.tags }}' | sed 's/^/  - /'
-            echo "- Railway: auto deploys from Docker image tag"
+            echo "- Railway source: Docker Hub image tag"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  deploy-web:
-    name: Deploy Web on Vercel
+  deploy-api-railway:
+    name: Redeploy API on Railway
+    if: ${{ inputs.deploy-api }}
     runs-on: ubuntu-latest
     needs: docker-api
+    environment: ${{ inputs.github-environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate Railway deploy settings
+        shell: bash
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_API: ${{ secrets.RAILWAY_SERVICE_API }}
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ] || [ -z "$RAILWAY_PROJECT_ID" ] || [ -z "$RAILWAY_SERVICE_API" ]; then
+            echo "Missing Railway deploy settings for the '${{ inputs.github-environment }}' GitHub Environment."
+            echo "Set RAILWAY_TOKEN, RAILWAY_PROJECT_ID and RAILWAY_SERVICE_API."
+            exit 1
+          fi
+
+      - name: Setup Railway CLI
+        uses: ./.github/actions/setup-railway
+
+      - name: Redeploy API service on Railway from Docker Hub
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_API: ${{ secrets.RAILWAY_SERVICE_API }}
+        run: |
+          railway redeploy \
+          --service "$RAILWAY_SERVICE_API" \
+          --yes
+
+      - name: Summarize Railway deployment
+        shell: bash
+        run: |
+          {
+            echo "### Railway Deployment"
+            echo "- Environment: ${{ inputs.railway-environment-name }}"
+            echo "- Service: ${{ secrets.RAILWAY_SERVICE_API }}"
+            echo "- Source: Docker Hub image tag '${{ inputs.docker-channel }}'"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-web-only:
+    name: Deploy Web on Vercel
+    if: ${{ inputs.deploy-web && !inputs.deploy-api }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.github-environment }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WEB }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Setup Doppler CLI
+        uses: ./.github/actions/setup-doppler
+        with:
+          token: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Setup Vercel CLI
+        uses: ./.github/actions/setup-vercel
+
+      - name: Pull Vercel project settings
+        run: vercel pull --yes --environment=${{ inputs.vercel-environment }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Vercel output
+        shell: bash
+        run: |
+          if [ "${{ inputs.vercel-environment }}" = "production" ]; then
+            doppler run --command="vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}"
+          else
+            doppler run --command="vercel build --token=${{ secrets.VERCEL_TOKEN }}"
+          fi
+
+      - name: Deploy to Vercel
+        id: vercel-deploy
+        shell: bash
+        run: |
+          if [ "${{ inputs.vercel-environment }}" = "production" ]; then
+            DEPLOYMENT_URL="$(vercel deploy --prebuilt --archive=tgz --prod --token=${{ secrets.VERCEL_TOKEN }})"
+          else
+            DEPLOYMENT_URL="$(vercel deploy --prebuilt --archive=tgz --token=${{ secrets.VERCEL_TOKEN }})"
+          fi
+
+          echo "deployment-url=$DEPLOYMENT_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Summarize Vercel deployment
+        shell: bash
+        run: |
+          {
+            echo "### Vercel Deployment"
+            echo "- Environment: ${{ inputs.vercel-environment }}"
+            echo "- URL: ${{ steps.vercel-deploy.outputs.deployment-url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-web-after-api:
+    name: Deploy Web on Vercel
+    if: ${{ inputs.deploy-web && inputs.deploy-api }}
+    runs-on: ubuntu-latest
+    needs: deploy-api-railway
     environment: ${{ inputs.github-environment }}
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

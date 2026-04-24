@@ -26,6 +26,8 @@ jobs:
       vercel-environment: preview
       docker-channel: dev
       railway-environment-name: development
+      deploy-api: true
+      deploy-web: true
     secrets: inherit
 
   deploy-staging:
@@ -36,6 +38,8 @@ jobs:
       vercel-environment: preview
       docker-channel: staging
       railway-environment-name: staging
+      deploy-api: true
+      deploy-web: true
     secrets: inherit
 
   deploy-main:
@@ -46,4 +50,6 @@ jobs:
       vercel-environment: production
       docker-channel: production
       railway-environment-name: production
+      deploy-api: true
+      deploy-web: true
     secrets: inherit

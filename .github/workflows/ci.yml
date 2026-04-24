@@ -8,13 +8,66 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  quality:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+      shared: ${{ steps.filter.outputs.shared }}
+      run-api: ${{ steps.scope.outputs.run-api }}
+      run-web: ${{ steps.scope.outputs.run-web }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect CI scope
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          token: ${{ secrets.REPOSITORY_TOKEN }}
+          filters: |
+            api:
+              - 'apps/api/**'
+              - '.dockerignore'
+            web:
+              - 'apps/web/**'
+            shared:
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+
+      - name: Resolve app impact
+        id: scope
+        shell: bash
+        env:
+          API_CHANGED: ${{ steps.filter.outputs.api }}
+          WEB_CHANGED: ${{ steps.filter.outputs.web }}
+          SHARED_CHANGED: ${{ steps.filter.outputs.shared }}
+        run: |
+          if [ "$API_CHANGED" = "true" ] || [ "$SHARED_CHANGED" = "true" ]; then
+            echo "run-api=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run-api=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$WEB_CHANGED" = "true" ] || [ "$SHARED_CHANGED" = "true" ]; then
+            echo "run-web=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run-web=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  quality-api:
+    if: ${{ needs.changes.outputs.run-api == 'true' }}
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,10 +76,12 @@ jobs:
       - name: Setup Node and pnpm workspace
         uses: ./.github/actions/setup-node-pnpm
 
-      - name: Run lint and format check
-        run: pnpm format:check && pnpm lint
+      - name: Run API lint and format check
+        run: pnpm --filter api format:check && pnpm --filter api lint
 
-  tests:
+  quality-web:
+    if: ${{ needs.changes.outputs.run-web == 'true' }}
+    needs: changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,15 +90,30 @@ jobs:
       - name: Setup Node and pnpm workspace
         uses: ./.github/actions/setup-node-pnpm
 
-      - name: Run unit tests
+      - name: Run web lint and format check
+        run: pnpm --filter web format:check && pnpm --filter web lint
+
+  tests-api:
+    if: ${{ needs.changes.outputs.run-api == 'true' }}
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node and pnpm workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Run API unit tests
         run: pnpm --filter api test
 
-      - name: Run e2e tests
+      - name: Run API e2e tests
         run: pnpm --filter api test:e2e
 
-  build:
+  build-api:
+    if: ${{ needs.changes.outputs.run-api == 'true' }}
+    needs: [changes, quality-api, tests-api]
     runs-on: ubuntu-latest
-    needs: [quality, tests]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -51,12 +121,27 @@ jobs:
       - name: Setup Node and pnpm workspace
         uses: ./.github/actions/setup-node-pnpm
 
-      - name: Build monorepo
-        run: pnpm build
+      - name: Build API
+        run: pnpm --filter api build
+
+  build-web:
+    if: ${{ needs.changes.outputs.run-web == 'true' }}
+    needs: [changes, quality-web]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node and pnpm workspace
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Build web
+        run: pnpm --filter web build
 
   docker-validate:
+    if: ${{ needs.changes.outputs.run-api == 'true' }}
+    needs: [changes, quality-api, tests-api]
     runs-on: ubuntu-latest
-    needs: [quality, tests]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -72,3 +157,66 @@ jobs:
           target: runtime
           push: false
           load: false
+
+  deploy-dev:
+    if: >-
+      ${{
+        always() &&
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/dev' &&
+        (needs.changes.outputs.run-api == 'true' || needs.changes.outputs.run-web == 'true') &&
+        !contains(join(needs.*.result, ','), 'failure') &&
+        !contains(join(needs.*.result, ','), 'cancelled')
+      }}
+    needs: [changes, build-api, build-web, docker-validate]
+    uses: ./.github/workflows/deploy-shared.yml
+    with:
+      github-environment: dev
+      vercel-environment: preview
+      docker-channel: dev
+      railway-environment-name: development
+      deploy-api: ${{ needs.changes.outputs.run-api == 'true' }}
+      deploy-web: ${{ needs.changes.outputs.run-web == 'true' }}
+    secrets: inherit
+
+  deploy-staging:
+    if: >-
+      ${{
+        always() &&
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/staging' &&
+        (needs.changes.outputs.run-api == 'true' || needs.changes.outputs.run-web == 'true') &&
+        !contains(join(needs.*.result, ','), 'failure') &&
+        !contains(join(needs.*.result, ','), 'cancelled')
+      }}
+    needs: [changes, build-api, build-web, docker-validate]
+    uses: ./.github/workflows/deploy-shared.yml
+    with:
+      github-environment: staging
+      vercel-environment: preview
+      docker-channel: staging
+      railway-environment-name: staging
+      deploy-api: ${{ needs.changes.outputs.run-api == 'true' }}
+      deploy-web: ${{ needs.changes.outputs.run-web == 'true' }}
+    secrets: inherit
+
+  deploy-main:
+    if: >-
+      ${{
+        always() &&
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/main' &&
+        (needs.changes.outputs.run-api == 'true' || needs.changes.outputs.run-web == 'true') &&
+        !contains(join(needs.*.result, ','), 'failure') &&
+        !contains(join(needs.*.result, ','), 'cancelled')
+      }}
+    needs: [changes, build-api, build-web, docker-validate]
+    uses: ./.github/workflows/deploy-shared.yml
+    with:
+      github-environment: production
+      vercel-environment: production
+      docker-channel: production
+      railway-environment-name: production
+      deploy-api: ${{ needs.changes.outputs.run-api == 'true' }}
+      deploy-web: ${{ needs.changes.outputs.run-web == 'true' }}
+    secrets: inherit
